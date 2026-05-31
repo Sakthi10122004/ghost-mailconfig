@@ -1,30 +1,33 @@
 const path = require('path');
 const fs   = require('fs');
 
-// Locate the directory where the user ran npm install
-let ghostRoot = process.env.INIT_CWD;
-
-if (!ghostRoot || !fs.existsSync(path.join(ghostRoot, 'package.json'))) {
-  // Fallback if INIT_CWD is missing or incorrect
-  ghostRoot = path.resolve(process.cwd(), '../../');
-}
-
-const ghostPkgPath = path.join(ghostRoot, 'package.json');
-
 console.log('\n[+] mailconfig: Running postinstall setup...\n');
 
-let isGhost = false;
-if (fs.existsSync(ghostPkgPath)) {
-  try {
-    const pkg = JSON.parse(fs.readFileSync(ghostPkgPath, 'utf8'));
-    // Check if the name in package.json is "ghost" or if we see typical Ghost folders
-    if (pkg.name === 'ghost' || fs.existsSync(path.join(ghostRoot, 'current/index.js'))) {
-      isGhost = true;
-    }
-  } catch (err) {}
+// Robustly find Ghost root by climbing up the tree from where the script is executed
+let ghostRoot = null;
+let currentDir = process.env.INIT_CWD || process.cwd();
+
+// Climb up to 5 directories looking for a Ghost installation signature
+for (let i = 0; i < 5; i++) {
+  if (fs.existsSync(path.join(currentDir, '.ghost-cli')) || 
+      fs.existsSync(path.join(currentDir, 'config.development.json')) ||
+      fs.existsSync(path.join(currentDir, 'config.production.json'))) {
+    ghostRoot = currentDir;
+    break;
+  }
+  // Try looking one level higher
+  currentDir = path.resolve(currentDir, '..');
 }
 
-if (!isGhost) {
+// Fallback to checking the node_modules parent if symlinked locally
+if (!ghostRoot) {
+  const nodeModulesParent = path.resolve(__dirname, '../../../');
+  if (fs.existsSync(path.join(nodeModulesParent, '.ghost-cli'))) {
+    ghostRoot = nodeModulesParent;
+  }
+}
+
+if (!ghostRoot) {
   console.warn('\x1b[31m%s\x1b[0m', '[!] Error: You must run `npm install mailconfig` inside a valid Ghost installation directory.');
   console.warn('\x1b[33m%s\x1b[0m', '[!] Setup aborted. Please cd into your Ghost root folder and try again.');
   process.exit(1);

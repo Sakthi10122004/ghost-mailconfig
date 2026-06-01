@@ -58,6 +58,15 @@ if (!config.mail || config.mail.transport === 'Direct') {
   console.log('\x1b[32m%s\x1b[0m', `Mail block initialized inside ${targetConfigFile}`);
 }
 
+// Get our own package name dynamically
+const myPkgPath = path.join(__dirname, '../package.json');
+let myPkgName = 'mailconfig';
+if (fs.existsSync(myPkgPath)) {
+  try {
+    myPkgName = JSON.parse(fs.readFileSync(myPkgPath, 'utf8')).name;
+  } catch(e) {}
+}
+
 // Register as a native Ghost Scheduling Adapter
 let configModified = false;
 
@@ -68,13 +77,14 @@ let configModified = false;
         let conf = JSON.parse(fs.readFileSync(filePath, 'utf8'));
         
         // Ensure scheduling block exists and registers our plugin natively
-        if (!conf.scheduling || conf.scheduling.active !== 'mailconfig') {
+        if (!conf.scheduling || conf.scheduling.active !== myPkgName) {
             conf.scheduling = {
-                active: 'mailconfig',
-                mailconfig: {}
+                active: myPkgName
             };
+            conf.scheduling[myPkgName] = {};
+            
             fs.writeFileSync(filePath, JSON.stringify(conf, null, 2));
-            console.log('\x1b[32m%s\x1b[0m', `[+] mailconfig natively registered as an adapter in ${configFile}`);
+            console.log('\x1b[32m%s\x1b[0m', `[+] ${myPkgName} natively registered as an adapter in ${configFile}`);
             configModified = true;
         }
     }

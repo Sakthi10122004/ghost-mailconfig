@@ -6,7 +6,6 @@ exports.attach = function(app) {
         return;
     }
 
-    // Mount the panel routes seamlessly onto Ghost's Express engine pipeline
     app.use('/mailconfig', router);
     
     console.log('\n==================================================');

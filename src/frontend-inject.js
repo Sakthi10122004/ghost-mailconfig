@@ -1,9 +1,7 @@
 (function() {
     function injectSidebarButton() {
-        // Prevent duplicate - check flag or element
         if (window._mailconfigInjecting || document.getElementById('mailconfig-nav-item')) return true;
 
-        // Try multiple selectors because Ghost's DOM changes across versions
         const settingsLink = document.querySelector('a[href="#/settings/"]') 
                           || document.querySelector('[data-test-nav="settings"]')
                           || document.querySelector('a[href*="settings"]');
@@ -14,7 +12,6 @@
                                 
         if (targetContainer) {
             window._mailconfigInjecting = true;
-            // Check config to determine dot color
             fetch('/ghost/mailconfig/api/config').then(r => r.json()).then(config => {
                 const hasAuth = config && config.options && config.options.auth && (config.options.auth.user || config.options.auth.pass || config.options.auth.api_key || config.options.auth.domain);
                 const isConfigured = !!(config && config.transport && config.transport !== 'Direct' && hasAuth);
@@ -22,7 +19,6 @@
                 
                 const li = document.createElement('li');
                 li.id = 'mailconfig-nav-item';
-                // Mimic Ghost's styling
                 li.innerHTML = `<a href="#" onclick="window.openMailConfigOverlay(event)" style="display: flex; align-items: center; padding: 8px 20px; color: #394047; text-decoration: none; font-size: 1.4rem; font-weight: 500;">
                     <svg style="width: 16px; height: 16px; margin-right: 12px; fill: currentColor;" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
                     Mail Transport

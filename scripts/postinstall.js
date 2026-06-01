@@ -84,12 +84,11 @@ let configModified = false;
             conf.scheduling[myPkgName] = {};
             
             fs.writeFileSync(filePath, JSON.stringify(conf, null, 2));
-            console.log('\x1b[32m%s\x1b[0m', `[+] ${myPkgName} natively registered as an adapter in ${configFile}`);
             configModified = true;
         }
     }
 });
 
-if (configModified) {
-    console.log('\x1b[32m%s\x1b[0m', '[+] Plugin installed! Restart Ghost for changes to take effect.');
-}
+// Always show the success message if we found a Ghost root
+console.log('\n\x1b[32m%s\x1b[0m', 'Plugin installed successfully, connected with your Ghost instance. Do `ghost restart`.');
+console.log('');

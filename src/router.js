@@ -6,6 +6,18 @@ const providers    = require('./providers');
 
 router.use(express.json());
 
+// Security Middleware: Protect against unauthenticated access
+router.use((req, res, next) => {
+  // Allow the frontend-inject.js to be served without auth so the UI button can load
+  if (req.path === '/frontend-inject.js') return next();
+  
+  const cookies = req.headers.cookie || '';
+  if (!cookies.includes('ghost-admin-api-session')) {
+    return res.status(403).json({ error: 'Forbidden: Unauthorized Admin Access' });
+  }
+  next();
+});
+
 // UI Dashboard serving route
 router.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../ui/index.html'));

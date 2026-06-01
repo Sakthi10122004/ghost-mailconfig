@@ -16,7 +16,8 @@
             window._mailconfigInjecting = true;
             // Check config to determine dot color
             fetch('/ghost/mailconfig/api/config').then(r => r.json()).then(config => {
-                const isConfigured = !!(config && config.transport);
+                const hasAuth = config && config.options && config.options.auth && (config.options.auth.user || config.options.auth.pass || config.options.auth.api_key || config.options.auth.domain);
+                const isConfigured = !!(config && config.transport && config.transport !== 'Direct' && hasAuth);
                 const dotColor = isConfigured ? '#30cf43' : '#e24a4a';
                 
                 const li = document.createElement('li');

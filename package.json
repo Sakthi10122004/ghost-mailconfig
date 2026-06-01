@@ -1,5 +1,5 @@
 {
-  "name": "mailconfig",
+  "name": "@sakthi10122004/mailconfig",
   "version": "1.0.0",
   "description": "Ghost CMS mail transport configurator — no core file edits",
   "main": "src/adapter.js",

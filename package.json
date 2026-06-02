@@ -3,6 +3,9 @@
   "version": "1.0.6",
   "description": "Ghost CMS mail transport configurator — no core file edits",
   "main": "src/adapter.js",
+  "bin": {
+    "mailconfig-cleanup": "scripts/uninstall.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "node scripts/postinstall.js",

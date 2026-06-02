@@ -40,6 +40,21 @@ ghost restart
 
 That's it! Your Ghost environment is now configured for outgoing transactional mail.
 
+### 4. Uninstallation
+Modern versions of `npm` (v7+) no longer automatically run uninstall scripts for dependencies. Because MailConfig hooks into your configuration, you must manually run the cleanup command **before** uninstalling the package, otherwise Ghost will fail to boot due to a missing scheduling adapter.
+
+To cleanly remove the plugin, run the following commands in your Ghost root directory:
+```bash
+# 1. Clean the configuration files
+npx mailconfig-cleanup
+
+# 2. Uninstall the package
+npm uninstall @sakthi10122004/mailconfig
+
+# 3. Restart Ghost
+ghost restart
+```
+
 ---
 
 ##  Architecture & Under the Hood

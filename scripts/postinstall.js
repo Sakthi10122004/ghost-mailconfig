@@ -19,7 +19,6 @@ for (let i = 0; i < 5; i++) {
   currentDir = path.resolve(currentDir, '..');
 }
 
-// Fallback to checking the node_modules parent if symlinked locally
 if (!ghostRoot) {
   const nodeModulesParent = path.resolve(__dirname, '../../../');
   if (fs.existsSync(path.join(nodeModulesParent, '.ghost-cli'))) {
@@ -33,7 +32,6 @@ if (!ghostRoot) {
   process.exit(1);
 }
 
-// Dynamically target the active environment file
 const isDev = fs.existsSync(path.join(ghostRoot, 'config.development.json'));
 const targetConfigFile = isDev ? 'config.development.json' : 'config.production.json';
 const configPath = path.join(ghostRoot, targetConfigFile);
@@ -43,7 +41,6 @@ if (fs.existsSync(configPath)) {
   config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 }
 
-// Inject a base configuration placeholder if none exists
 if (!config.mail || config.mail.transport === 'Direct') {
   config.mail = {
     transport: 'SMTP',

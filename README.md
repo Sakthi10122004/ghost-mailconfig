@@ -20,7 +20,7 @@
 Navigate to your active Ghost installation root folder (where your `config.production.json` lives) and run:
 
 ```bash
-npm install @sakthi10122004/mailconfig
+npm install @sakthi10122004/mailconfig@latest
 ```
 
 > **Note**: Our strict installer will verify that you are in a valid Ghost root folder. If you aren't, the installation will abort to protect your file system.

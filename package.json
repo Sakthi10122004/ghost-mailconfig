@@ -1,10 +1,12 @@
 {
   "name": "@sakthi10122004/mailconfig",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Ghost CMS mail transport configurator — no core file edits",
   "main": "src/adapter.js",
   "scripts": {
-    "postinstall": "node scripts/postinstall.js"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "node scripts/postinstall.js",
+    "preuninstall": "node scripts/uninstall.js"
   },
   "dependencies": {
     "chalk": "^4.1.2",

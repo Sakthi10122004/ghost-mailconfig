@@ -1,85 +1,176 @@
 (function() {
+    'use strict';
+    
+    let injected = false;
+    let mcContainer = null;
+
+    function syncTheme() {
+        const isDark = document.documentElement.classList.contains('dark');
+        localStorage.setItem('ghost-admin-theme', isDark ? 'dark' : 'light');
+        if (mcContainer) {
+            mcContainer.style.background = isDark ? '#101114' : '#ffffff';
+        }
+    }
+    syncTheme();
+
+    const themeObserver = new MutationObserver(syncTheme);
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
     function injectSidebarButton() {
-        if (window._mailconfigInjecting || document.getElementById('mailconfig-nav-item')) return true;
+        if (document.getElementById('mailconfig-nav-item')) {
+            injected = true;
+            return true;
+        }
 
         const settingsLink = document.querySelector('a[href="#/settings/"]') 
                           || document.querySelector('[data-test-nav="settings"]')
                           || document.querySelector('a[href*="settings"]');
                           
-        const targetContainer = settingsLink ? settingsLink.parentElement : 
-                                document.querySelector('.gh-nav-bottom') || 
-                                document.querySelector('.gh-nav-list');
-                                
-        if (targetContainer) {
-            window._mailconfigInjecting = true;
+        if (settingsLink) {
+            const settingsLi = settingsLink.closest('li') || settingsLink.parentElement;
+            if (!settingsLi || !settingsLi.parentElement) return false;
+
+            // Fetch config to check transport status and set indicator dot color
             fetch('/ghost/mailconfig/api/config').then(r => r.json()).then(config => {
+                if (document.getElementById('mailconfig-nav-item')) return;
+
                 const hasAuth = config && config.options && config.options.auth && (config.options.auth.user || config.options.auth.pass || config.options.auth.api_key || config.options.auth.domain);
                 const isConfigured = !!(config && config.transport && config.transport !== 'Direct' && hasAuth);
                 const dotColor = isConfigured ? '#30cf43' : '#e24a4a';
                 
-                const li = document.createElement('li');
+                const li = document.createElement(settingsLi.tagName);
                 li.id = 'mailconfig-nav-item';
-                li.innerHTML = `<a href="#" onclick="window.openMailConfigOverlay(event)" style="display: flex; align-items: center; padding: 8px 20px; color: #394047; text-decoration: none; font-size: 1.4rem; font-weight: 500;">
-                    <svg style="width: 16px; height: 16px; margin-right: 12px; fill: currentColor;" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                    Mail Transport
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${dotColor}; margin-left: auto;"></span>
-                </a>`;
+                li.className = settingsLi.className;
                 
-                if (settingsLink && settingsLink.parentElement) {
-                    settingsLink.parentElement.insertAdjacentElement('afterend', li);
-                } else {
-                    targetContainer.appendChild(li);
+                const a = document.createElement(settingsLink.tagName);
+                a.id = 'mailconfig-nav-link';
+                if (a.tagName === 'A') {
+                    a.href = '#/settings/mail-transport';
                 }
+                
+                // Clone classes, excluding active
+                const classes = settingsLink.className.split(' ').filter(c => !c.toLowerCase().includes('active'));
+                a.className = classes.join(' ');
+
+                let iconSize = '18';
+                const settingsSvg = settingsLink.querySelector('svg');
+                if (settingsSvg) {
+                    iconSize = settingsSvg.getAttribute('width') || settingsSvg.getAttribute('height') || '18';
+                }
+
+                a.innerHTML = `
+                    <svg width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-right: 12px; vertical-align: middle;">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <span style="vertical-align: middle;">Mail Transport</span>
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${dotColor}; margin-left: auto; display: inline-block; vertical-align: middle;"></span>
+                `;
+                
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.location.hash = '#/settings/mail-transport';
+                });
+                
+                li.appendChild(a);
+                
+                // Insert after settings link
+                settingsLi.parentElement.insertBefore(li, settingsLi.nextSibling);
+                injected = true;
                 console.log('[mailconfig] Injected Mail Transport button into sidebar.');
+                
+                // Handle active state immediately if hash matches on load
+                handleHashChange();
             }).catch(err => console.error('[mailconfig] config check failed', err));
             return true;
         }
-
         return false;
     }
+
+    function handleHashChange() {
+        const hash = window.location.hash;
+        if (hash === '#/settings/mail-transport' || hash === '#/mail-transport') {
+            showMailConfigView();
+        } else {
+            hideMailConfigView();
+        }
+    }
+
+    function showMailConfigView() {
+        const emberApp = document.getElementById('ember-app');
+        const reactApp = document.getElementById('root');
+        
+        // Hide standard app shells
+        if (emberApp) emberApp.style.setProperty('display', 'none', 'important');
+        if (reactApp) reactApp.style.setProperty('display', 'none', 'important');
+
+        const isDark = document.documentElement.classList.contains('dark');
+
+        if (!mcContainer) {
+            mcContainer = document.createElement('div');
+            mcContainer.id = 'mailconfig-container';
+            mcContainer.style.cssText = `
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                width: 100vw; 
+                height: 100vh; 
+                z-index: 999999; 
+                background: ${isDark ? '#101114' : '#ffffff'};
+            `;
+            document.body.appendChild(mcContainer);
+        }
+        
+        mcContainer.style.display = 'block';
+
+        let iframe = mcContainer.querySelector('iframe');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.src = '/ghost/mailconfig/';
+            iframe.style.cssText = 'width: 100%; height: 100%; border: none; background: transparent;';
+            mcContainer.appendChild(iframe);
+        }
+
+        // Highlight sidebar nav item
+        const navLink = document.getElementById('mailconfig-nav-link');
+        if (navLink) {
+            navLink.classList.add('active');
+        }
+    }
+
+    function hideMailConfigView() {
+        const emberApp = document.getElementById('ember-app');
+        const reactApp = document.getElementById('root');
+        
+        if (emberApp) emberApp.style.removeProperty('display');
+        if (reactApp) reactApp.style.removeProperty('display');
+
+        if (mcContainer) {
+            mcContainer.style.display = 'none';
+            mcContainer.innerHTML = '';
+        }
+
+        const navLink = document.getElementById('mailconfig-nav-link');
+        if (navLink) {
+            navLink.classList.remove('active');
+        }
+    }
+
+    window.addEventListener('hashchange', handleHashChange);
 
     const observer = new MutationObserver(() => {
         injectSidebarButton();
     });
-    
-    document.addEventListener("DOMContentLoaded", () => {
+
+    if (document.body) {
         observer.observe(document.body, { childList: true, subtree: true });
-    });
-
-    window.openMailConfigOverlay = function(e) {
-        if (e) e.preventDefault();
-        
-        if (document.getElementById('mailconfig-overlay')) return;
-        
-        const overlay = document.createElement('div');
-        overlay.id = 'mailconfig-overlay';
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100vw';
-        overlay.style.height = '100vh';
-        overlay.style.backgroundColor = 'rgba(8, 9, 12, 0.75)';
-        overlay.style.backdropFilter = 'blur(4px)';
-        overlay.style.zIndex = '9999999';
-        overlay.style.display = 'flex';
-        overlay.style.justifyContent = 'center';
-        overlay.style.alignItems = 'center';
-        overlay.style.animation = 'fadein 0.2s ease-in-out';
-        
-        overlay.innerHTML = `
-            <style>
-                @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
-            </style>
-            <div style="width: 90%; max-width: 580px; height: 85%; max-height: 800px; background: #f4f8fb; border-radius: 12px; overflow: hidden; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
-                <button onclick="window.closeMailConfigOverlay()" style="position: absolute; top: 12px; right: 16px; border: none; background: rgba(0,0,0,0.05); border-radius: 50%; width: 32px; height: 32px; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #15171A; z-index: 10; transition: background 0.2s;">&times;</button>
-                <iframe src="/ghost/mailconfig/" style="width: 100%; height: 100%; border: none; background: transparent;"></iframe>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-    };
-
-    window.closeMailConfigOverlay = function() {
-        const overlay = document.getElementById('mailconfig-overlay');
-        if (overlay) overlay.remove();
-    };
+        injectSidebarButton();
+        handleHashChange();
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            observer.observe(document.body, { childList: true, subtree: true });
+            injectSidebarButton();
+            handleHashChange();
+        });
+    }
 })();

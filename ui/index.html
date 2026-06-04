@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f4f8fb;
+      --bg: #ffffff;
       --canvas-bg: #ffffff;
       --text-main: #15171a;
       --text-muted: #7c8b9a;
@@ -33,7 +33,7 @@
     }
 
     html.dark {
-      --bg: #101114;
+      --bg: #15171a;
       --canvas-bg: #15171a;
       --text-main: #f9fafb;
       --text-muted: #7c8b9a;
@@ -173,7 +173,7 @@
     /* Page Content */
     .gh-main-container {
       flex: 1;
-      padding: 40px 32px;
+      padding: 24px 32px;
       overflow-y: auto;
       display: flex;
       justify-content: center;
@@ -206,10 +206,10 @@
 
     /* Cards & Layout */
     .gh-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 32px;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0;
       margin-bottom: 28px;
     }
 
@@ -640,15 +640,17 @@
     }
 
     function closeConfig() {
-      if (window.parent && window.parent.location) {
-        window.parent.location.hash = '#/dashboard';
+      if (window.parent && typeof window.parent.closeMailConfigOverlay === 'function') {
+        window.parent.closeMailConfigOverlay();
+      } else {
+        if (window.parent && window.parent.location) {
+          window.parent.location.hash = '#/dashboard';
+        }
       }
     }
 
     function goToSettings() {
-      if (window.parent && window.parent.location) {
-        window.parent.location.hash = '#/settings';
-      }
+      closeConfig();
     }
 
     async function init() {

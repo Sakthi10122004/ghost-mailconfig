@@ -2,19 +2,6 @@
     'use strict';
     
     let injected = false;
-    let mcContainer = null;
-
-    function syncTheme() {
-        const isDark = document.documentElement.classList.contains('dark');
-        localStorage.setItem('ghost-admin-theme', isDark ? 'dark' : 'light');
-        if (mcContainer) {
-            mcContainer.style.background = isDark ? '#101114' : '#ffffff';
-        }
-    }
-    syncTheme();
-
-    const themeObserver = new MutationObserver(syncTheme);
-    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
     function injectSidebarButton() {
         if (document.getElementById('mailconfig-nav-item')) {
@@ -44,9 +31,7 @@
                 
                 const a = document.createElement(settingsLink.tagName);
                 a.id = 'mailconfig-nav-link';
-                if (a.tagName === 'A') {
-                    a.href = '#/settings/mail-transport';
-                }
+                a.href = '#';
                 
                 // Clone classes, excluding active
                 const classes = settingsLink.className.split(' ').filter(c => !c.toLowerCase().includes('active'));
@@ -69,7 +54,7 @@
                 
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
-                    window.location.hash = '#/settings/mail-transport';
+                    window.openMailConfigOverlay();
                 });
                 
                 li.appendChild(a);
@@ -78,99 +63,112 @@
                 settingsLi.parentElement.insertBefore(li, settingsLi.nextSibling);
                 injected = true;
                 console.log('[mailconfig] Injected Mail Transport button into sidebar.');
-                
-                // Handle active state immediately if hash matches on load
-                handleHashChange();
             }).catch(err => console.error('[mailconfig] config check failed', err));
             return true;
         }
         return false;
     }
 
-    function handleHashChange() {
-        const hash = window.location.hash;
-        if (hash === '#/settings/mail-transport' || hash === '#/mail-transport') {
-            showMailConfigView();
-        } else {
-            hideMailConfigView();
-        }
-    }
-
-    function showMailConfigView() {
-        const emberApp = document.getElementById('ember-app');
-        const reactApp = document.getElementById('root');
+    window.openMailConfigOverlay = function() {
+        if (document.getElementById('mailconfig-overlay')) return;
         
-        // Hide standard app shells
-        if (emberApp) emberApp.style.setProperty('display', 'none', 'important');
-        if (reactApp) reactApp.style.setProperty('display', 'none', 'important');
-
         const isDark = document.documentElement.classList.contains('dark');
-
-        if (!mcContainer) {
-            mcContainer = document.createElement('div');
-            mcContainer.id = 'mailconfig-container';
-            mcContainer.style.cssText = `
-                position: fixed; 
-                top: 0; 
-                left: 0; 
-                width: 100vw; 
-                height: 100vh; 
-                z-index: 999999; 
-                background: ${isDark ? '#101114' : '#ffffff'};
-            `;
-            document.body.appendChild(mcContainer);
-        }
         
-        mcContainer.style.display = 'block';
+        const overlay = document.createElement('div');
+        overlay.id = 'mailconfig-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(8, 9, 12, 0.4);
+            backdrop-filter: blur(2px);
+            z-index: 999999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: mailconfigFadeIn 0.2s ease-out;
+        `;
+        
+        overlay.innerHTML = `
+            <style>
+                @keyframes mailconfigFadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes mailconfigFadeOut { from { opacity: 1; } to { opacity: 0; } }
+                @keyframes mailconfigSlideIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+                @keyframes mailconfigSlideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(12px); opacity: 0; } }
+            </style>
+            <div id="mailconfig-modal-box" style="
+                width: 90%; 
+                max-width: 680px; 
+                height: 85%; 
+                max-height: 800px; 
+                background: ${isDark ? '#15171a' : '#ffffff'}; 
+                border: 1px solid ${isDark ? '#24272c' : '#f0f3f6'}; 
+                border-radius: 12px; 
+                overflow: hidden; 
+                box-shadow: 0 20px 40px rgba(0,0,0,0.15); 
+                display: flex; 
+                flex-direction: column; 
+                animation: mailconfigSlideIn 0.25s cubic-bezier(0.19, 1, 0.22, 1);
+            ">
+                <iframe src="/ghost/mailconfig/" style="width: 100%; height: 100%; border: none; background: transparent;"></iframe>
+            </div>
+        `;
+        
+        // Close when clicking outside the modal box
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                window.closeMailConfigOverlay();
+            }
+        });
 
-        let iframe = mcContainer.querySelector('iframe');
-        if (!iframe) {
-            iframe = document.createElement('iframe');
-            iframe.src = '/ghost/mailconfig/';
-            iframe.style.cssText = 'width: 100%; height: 100%; border: none; background: transparent;';
-            mcContainer.appendChild(iframe);
-        }
-
+        document.body.appendChild(overlay);
+        
         // Highlight sidebar nav item
         const navLink = document.getElementById('mailconfig-nav-link');
         if (navLink) {
             navLink.classList.add('active');
         }
-    }
+    };
 
-    function hideMailConfigView() {
-        const emberApp = document.getElementById('ember-app');
-        const reactApp = document.getElementById('root');
-        
-        if (emberApp) emberApp.style.removeProperty('display');
-        if (reactApp) reactApp.style.removeProperty('display');
-
-        if (mcContainer) {
-            mcContainer.style.display = 'none';
-            mcContainer.innerHTML = '';
+    window.closeMailConfigOverlay = function() {
+        const overlay = document.getElementById('mailconfig-overlay');
+        if (overlay) {
+            const box = document.getElementById('mailconfig-modal-box');
+            if (box) box.style.animation = 'mailconfigSlideOut 0.2s ease-in forwards';
+            overlay.style.animation = 'mailconfigFadeOut 0.2s ease-in forwards';
+            
+            setTimeout(() => {
+                overlay.remove();
+                const navLink = document.getElementById('mailconfig-nav-link');
+                if (navLink) {
+                    navLink.classList.remove('active');
+                }
+            }, 180);
         }
+    };
 
-        const navLink = document.getElementById('mailconfig-nav-link');
-        if (navLink) {
-            navLink.classList.remove('active');
+    // Watch for theme changes on root to keep modal backdrop and box colors synchronized
+    const themeObserver = new MutationObserver(() => {
+        const overlay = document.getElementById('mailconfig-overlay');
+        const box = document.getElementById('mailconfig-modal-box');
+        if (overlay && box) {
+            const isDark = document.documentElement.classList.contains('dark');
+            box.style.background = isDark ? '#15171a' : '#ffffff';
+            box.style.borderColor = isDark ? '#24272c' : '#f0f3f6';
         }
-    }
-
-    window.addEventListener('hashchange', handleHashChange);
-
-    const observer = new MutationObserver(() => {
-        injectSidebarButton();
     });
 
     if (document.body) {
-        observer.observe(document.body, { childList: true, subtree: true });
+        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        new MutationObserver(injectSidebarButton).observe(document.body, { childList: true, subtree: true });
         injectSidebarButton();
-        handleHashChange();
     } else {
         document.addEventListener('DOMContentLoaded', () => {
-            observer.observe(document.body, { childList: true, subtree: true });
+            themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+            new MutationObserver(injectSidebarButton).observe(document.body, { childList: true, subtree: true });
             injectSidebarButton();
-            handleHashChange();
         });
     }
 })();

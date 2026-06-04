@@ -59,10 +59,10 @@
                 
                 li.appendChild(a);
                 
-                // Insert after settings link
-                settingsLi.parentElement.insertBefore(li, settingsLi.nextSibling);
+                // Insert before settings link
+                settingsLi.parentElement.insertBefore(li, settingsLi);
                 injected = true;
-                console.log('[mailconfig] Injected Mail Transport button into sidebar.');
+                console.log('[mailconfig] Injected Mail Transport button into sidebar before Settings.');
             }).catch(err => console.error('[mailconfig] config check failed', err));
             return true;
         }

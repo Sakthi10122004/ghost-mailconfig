@@ -21,24 +21,50 @@ class MailconfigAdapter extends SchedulingDefault {
     constructor(options) {
         super(options);
         
-        // 1. Hook into Ghost Admin's Express response to inject our frontend script
-        if (express && express.response && !express.response._mailconfigHooked) {
-            const originalSendFile = express.response.sendFile;
-            express.response.sendFile = function(filePath) {
-                if (filePath && typeof filePath === 'string' && filePath.endsWith('index.html')) {
-                    try {
-                        let html = fs.readFileSync(filePath, 'utf8');
-                        html = html.replace('</head>', `<script src="/ghost/mailconfig/frontend-inject.js"></script></head>`);
-                        this.removeHeader('ETag');
-                        this.removeHeader('Content-Length');
-                        return this.send(html);
-                    } catch (e) {
-                        console.error('[mailconfig] Error injecting script:', e);
+        // 1. Hook into Ghost Admin's Express response to inject our frontend script cooperatively
+        if (express && express.response) {
+            // Register our script
+            global.__ghostCooperativeScripts = global.__ghostCooperativeScripts || [];
+            if (!global.__ghostCooperativeScripts.includes('/ghost/mailconfig/frontend-inject.js')) {
+                global.__ghostCooperativeScripts.push('/ghost/mailconfig/frontend-inject.js');
+            }
+
+            // Hook res.send if not already hooked
+            if (!express.response._cooperativeSendHooked) {
+                const originalSend = express.response.send;
+                express.response.send = function(body) {
+                    if (typeof body === 'string' && body.includes('</head>')) {
+                        const scripts = global.__ghostCooperativeScripts || [];
+                        scripts.forEach(src => {
+                            const tag = `<script src="${src}"></script>`;
+                            if (!body.includes(src)) {
+                                body = body.replace('</head>', `  ${tag}\n  </head>`);
+                            }
+                        });
                     }
-                }
-                return originalSendFile.apply(this, arguments);
-            };
-            express.response._mailconfigHooked = true;
+                    return originalSend.call(this, body);
+                };
+                express.response._cooperativeSendHooked = true;
+            }
+
+            // Hook res.sendFile if not already hooked
+            if (!express.response._cooperativeSendFileHooked) {
+                const originalSendFile = express.response.sendFile;
+                express.response.sendFile = function(filePath) {
+                    if (filePath && typeof filePath === 'string' && filePath.endsWith('index.html')) {
+                        try {
+                            const html = fs.readFileSync(filePath, 'utf8');
+                            this.removeHeader('ETag');
+                            this.removeHeader('Content-Length');
+                            return this.send(html);
+                        } catch (e) {
+                            console.error('[mailconfig] Cooperative sendFile error:', e);
+                        }
+                    }
+                    return originalSendFile.apply(this, arguments);
+                };
+                express.response._cooperativeSendFileHooked = true;
+            }
         }
 
         // 2. Hook into Node's HTTP Server to hijack /ghost/mailconfig routes instantly

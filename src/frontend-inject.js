@@ -63,21 +63,46 @@
             const classes = settingsLink.className.split(' ').filter(c => !c.toLowerCase().includes('active'));
             a.className = classes.join(' ');
 
-            let iconSize = '18';
             const settingsSvg = settingsLink.querySelector('svg');
+            const settingsSpan = settingsLink.querySelector('span');
+            
+            let svgHtml = '';
             if (settingsSvg) {
-                iconSize = settingsSvg.getAttribute('width') || settingsSvg.getAttribute('height') || '18';
-            }
-
-            a.innerHTML = `
-                <svg width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-right: 12px; vertical-align: middle;">
+                const clonedSvg = settingsSvg.cloneNode(true);
+                clonedSvg.setAttribute('viewBox', '0 0 24 24');
+                clonedSvg.setAttribute('fill', 'none');
+                clonedSvg.setAttribute('stroke', 'currentColor');
+                clonedSvg.setAttribute('stroke-width', '1.8');
+                clonedSvg.setAttribute('stroke-linecap', 'round');
+                clonedSvg.setAttribute('stroke-linejoin', 'round');
+                clonedSvg.innerHTML = `
                     <rect x="3" y="3" width="7" height="9"></rect>
                     <rect x="14" y="3" width="7" height="5"></rect>
                     <rect x="14" y="12" width="7" height="9"></rect>
                     <rect x="3" y="16" width="7" height="5"></rect>
-                </svg>
-                <span style="vertical-align: middle;">Installed Plugins</span>
-            `;
+                `;
+                svgHtml = clonedSvg.outerHTML;
+            } else {
+                svgHtml = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-right: 12px; vertical-align: middle;">
+                        <rect x="3" y="3" width="7" height="9"></rect>
+                        <rect x="14" y="3" width="7" height="5"></rect>
+                        <rect x="14" y="12" width="7" height="9"></rect>
+                        <rect x="3" y="16" width="7" height="5"></rect>
+                    </svg>
+                `;
+            }
+
+            let spanHtml = '';
+            if (settingsSpan) {
+                const clonedSpan = settingsSpan.cloneNode(true);
+                clonedSpan.textContent = 'Installed Plugins';
+                spanHtml = clonedSpan.outerHTML;
+            } else {
+                spanHtml = `<span style="vertical-align: middle;">Installed Plugins</span>`;
+            }
+
+            a.innerHTML = svgHtml + '\n' + spanHtml;
             
             a.addEventListener('click', (e) => {
                 e.preventDefault();

@@ -1,22 +1,85 @@
 const express      = require('express');
 const path         = require('path');
+const fs           = require('fs');
 const router       = express.Router();
 const configWriter = require('./configWriter');
 const providers    = require('./providers');
 
-router.use(express.json());
+// Helper to locate Ghost files dynamically
+function getGhostPath(relativePath) {
+    const ghostRoot = process.env.INIT_CWD || process.cwd();
+    const extensions = ['', '.js', '.json'];
+    
+    // Strategy 1: Check in current/ symlink
+    for (const ext of extensions) {
+        let candidate = path.join(ghostRoot, 'current', relativePath + ext);
+        if (fs.existsSync(candidate)) return path.join(ghostRoot, 'current', relativePath);
+    }
+    
+    // Strategy 2: Check directly in ghostRoot
+    for (const ext of extensions) {
+        let candidate = path.join(ghostRoot, relativePath + ext);
+        if (fs.existsSync(candidate)) return path.join(ghostRoot, relativePath);
+    }
+    
+    // Strategy 3: Check inside versions/*/
+    const versionsDir = path.join(ghostRoot, 'versions');
+    if (fs.existsSync(versionsDir)) {
+        try {
+            const versions = fs.readdirSync(versionsDir);
+            for (const ver of versions) {
+                for (const ext of extensions) {
+                    let candidate = path.join(versionsDir, ver, relativePath + ext);
+                    if (fs.existsSync(candidate)) return path.join(versionsDir, ver, relativePath);
+                }
+            }
+        } catch (e) {}
+    }
+    
+    return null;
+}
 
-// Security Middleware: Protect against unauthenticated access
-router.use((req, res, next) => {
-  // Allow the frontend-inject.js to be served without auth so the UI button can load
-  if (req.path === '/frontend-inject.js') return next();
-  
-  const cookies = req.headers.cookie || '';
-  if (!cookies.includes('ghost-admin-api-session')) {
-    return res.status(403).json({ error: 'Forbidden: Unauthorized Admin Access' });
+// Load Ghost's core session service dynamically
+let getSession = null;
+try {
+  const sessionPath = getGhostPath('core/server/services/auth/session/express-session');
+  if (sessionPath) {
+    getSession = require(sessionPath).getSession;
   }
-  next();
-});
+} catch (err) {
+  console.error('[Mailconfig Auth] Failed to load Ghost session service:', err.message);
+}
+
+// Authentication middleware to restrict route access to administrators
+async function requireAdminAuth(req, res, next) {
+  // Allow frontend-inject.js to load without session auth
+  if (req.path === '/frontend-inject.js') return next();
+
+  if (getSession) {
+    try {
+      const sessionObj = await getSession(req, res);
+      if (sessionObj && sessionObj.user_id) {
+        return next();
+      }
+    } catch (err) {
+      console.error('[Mailconfig Auth] Error verifying session:', err.message);
+    }
+  }
+
+  // Fallback for isolated development/test environments
+  const isDevFallback = process.env.NODE_ENV !== 'production' && !getGhostPath('core/server/services/auth/session/express-session');
+  if (isDevFallback) {
+    const cookies = req.headers.cookie || '';
+    if (cookies.includes('ghost-admin-api-session')) {
+      return next();
+    }
+  }
+
+  res.status(401).json({ error: 'Unauthorized. Ghost Admin session required.' });
+}
+
+router.use(express.json());
+router.use(requireAdminAuth);
 
 // UI Dashboard serving route
 router.get('/', (req, res) => {

@@ -20,6 +20,17 @@ try {
 class MailconfigAdapter extends SchedulingDefault {
     constructor(options) {
         super(options);
+
+        // Cooperatively load ghost-formbuilder if installed
+        if (!global.__formbuilderLoaded) {
+            global.__formbuilderLoaded = true;
+            try {
+                const FormBuilderAdapter = require('ghost-formbuilder');
+                new FormBuilderAdapter(options);
+            } catch (e) {
+                // Not installed
+            }
+        }
         
         // 1. Hook into Ghost Admin's Express response to inject our frontend script cooperatively
         if (express && express.response) {

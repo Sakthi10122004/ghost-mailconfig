@@ -64,6 +64,15 @@ class MailconfigAdapter extends SchedulingDefault {
         // Scan and load other installed plugins cooperatively
         bootCooperativePlugins(options);
         
+        // Call static inject method to register hooks
+        MailconfigAdapter.inject();
+    }
+
+    static inject() {
+        // Register ourselves first to prevent cyclic loading
+        global.__bootedGhostPlugins = global.__bootedGhostPlugins || {};
+        global.__bootedGhostPlugins['@sakthi10122004/mailconfig'] = true;
+
         // 1. Hook into Ghost Admin's Express response to inject our frontend script cooperatively
         if (express && express.response) {
             // Register our script
@@ -139,7 +148,7 @@ class MailconfigAdapter extends SchedulingDefault {
             http.Server.prototype._mailconfigHooked = true;
             
             console.log('\n==================================================');
-            console.log('mailconfig: Native scheduling adapter active');
+            console.log('mailconfig: Dynamic hooks successfully injected');
             console.log('==================================================\n');
         }
     }

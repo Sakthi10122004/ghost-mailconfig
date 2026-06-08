@@ -59,6 +59,7 @@ class MailconfigAdapter extends SchedulingDefault {
         // Register ourselves first to prevent cyclic loading
         global.__bootedGhostPlugins = global.__bootedGhostPlugins || {};
         global.__bootedGhostPlugins['@sakthi10122004/mailconfig'] = true;
+        global.__ghostAdapterOptions = options;
 
         // Scan and load other installed plugins cooperatively
         bootCooperativePlugins(options);
@@ -76,6 +77,9 @@ class MailconfigAdapter extends SchedulingDefault {
                 const originalSend = express.response.send;
                 express.response.send = function(body) {
                     if (typeof body === 'string' && body.includes('</head>')) {
+                        // Dynamic discovery of newly installed packages
+                        bootCooperativePlugins(global.__ghostAdapterOptions);
+
                         const scripts = global.__ghostCooperativeScripts || [];
                         scripts.forEach(src => {
                             const tag = `<script src="${src}"></script>`;

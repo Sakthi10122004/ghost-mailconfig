@@ -171,80 +171,6 @@
         }
     };
 
-    // ── Individual Mail Transport UI Injector & Actions ────────────────
-    let mailconfigInjected = false;
-    let isFetchingConfig = false;
-
-    function injectSidebarButton() {
-        if (document.getElementById('mailconfig-nav-item')) {
-            mailconfigInjected = true;
-            return true;
-        }
-
-        // Ghost 6 Selector Patch
-        const settingsLink = document.querySelector('[data-test-nav="settings"]')
-                          || document.querySelector('a[href*="settings"]')
-                          || document.querySelector('.gh-nav-bottom a');
-                                  
-        if (settingsLink && !isFetchingConfig) {
-            const settingsLi = settingsLink.closest('li') || settingsLink.parentElement;
-            if (!settingsLi || !settingsLi.parentElement) return false;
-
-            isFetchingConfig = true;
-            
-            fetch('/ghost/mailconfig/api/config')
-                .then(r => r.json())
-                .then(config => {
-                    isFetchingConfig = false;
-                    if (document.getElementById('mailconfig-nav-item')) return;
-
-                    const hasAuth = config && config.options && config.options.auth && (config.options.auth.user || config.options.auth.pass || config.options.auth.api_key || config.options.auth.domain);
-                    const isConfigured = !!(config && config.transport && config.transport !== 'Direct' && hasAuth);
-                    const dotColor = isConfigured ? '#30cf43' : '#e24a4a';
-                    
-                    const li = document.createElement(settingsLi.tagName);
-                    li.id = 'mailconfig-nav-item';
-                    li.className = settingsLi.className;
-                    
-                    const a = document.createElement(settingsLink.tagName);
-                    a.id = 'mailconfig-nav-link';
-                    a.href = '#';
-                    
-                    const classes = settingsLink.className.split(' ').filter(c => !c.toLowerCase().includes('active'));
-                    a.className = classes.join(' ');
-
-                    const settingsSpan = settingsLink.querySelector('span');
-                    let spanHtml = settingsSpan 
-                        ? `<span class="${settingsSpan.className}" style="vertical-align: middle;">Mail Transport</span>`
-                        : `<span style="vertical-align: middle;">Mail Transport</span>`;
-
-                    a.innerHTML = `
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-right: 12px; vertical-align: middle;">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                            <polyline points="22,6 12,13 2,6"></polyline>
-                        </svg>
-                        ${spanHtml}
-                        <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${dotColor}; margin-left: auto; display: inline-block; vertical-align: middle; margin-right: 4px;"></span>
-                    `;
-                    
-                    a.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        window.openMailConfigOverlay();
-                    });
-                    
-                    li.appendChild(a);
-                    settingsLi.parentElement.insertBefore(li, settingsLi);
-                    mailconfigInjected = true;
-                    console.log('[mailconfig] Injected Mail Transport button into sidebar.');
-                })
-                .catch(err => {
-                    isFetchingConfig = false;
-                    console.error('[mailconfig] config check failed', err);
-                });
-            return true;
-        }
-        return false;
-    }
 
     window.openMailConfigOverlay = function() {
         if (document.getElementById('mailconfig-overlay')) return;
@@ -319,7 +245,6 @@
 
     function runInjection() {
         injectPluginsTab();
-        injectSidebarButton();
     }
 
     if (document.body) {

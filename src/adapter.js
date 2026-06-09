@@ -131,7 +131,15 @@ class MailconfigAdapter extends SchedulingDefault {
                 res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
                 res.setHeader('Pragma', 'no-cache');
                 res.setHeader('Expires', '0');
-                res.sendFile(path.join(__dirname, 'frontend-inject.js'));
+                try {
+                    let content = fs.readFileSync(path.join(__dirname, 'frontend-inject.js'), 'utf8');
+                    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+                    content = content.replace('__VERSION_PLACEHOLDER__', pkg.version || '1.0.0');
+                    res.setHeader('Content-Type', 'application/javascript');
+                    res.send(content);
+                } catch (e) {
+                    res.sendFile(path.join(__dirname, 'frontend-inject.js'));
+                }
             });
             
             const router = require('./router');

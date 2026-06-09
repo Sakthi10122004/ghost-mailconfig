@@ -50,6 +50,17 @@ try {
   console.error('[Mailconfig Auth] Failed to load Ghost session service:', err.message);
 }
 
+// Load Ghost models dynamically
+let models = null;
+try {
+  const modelsPath = getGhostPath('core/server/models');
+  if (modelsPath) {
+    models = require(modelsPath);
+  }
+} catch (err) {
+  console.error('[Mailconfig Auth] Failed to load Ghost models:', err.message);
+}
+
 // Authentication middleware to restrict route access to administrators
 async function requireAdminAuth(req, res, next) {
   // Allow frontend-inject.js to load without session auth
@@ -59,7 +70,19 @@ async function requireAdminAuth(req, res, next) {
     try {
       const sessionObj = await getSession(req, res);
       if (sessionObj && sessionObj.user_id) {
-        return next();
+        if (models && models.User) {
+          const user = await models.User.findOne({ id: sessionObj.user_id }, { withRelated: ['roles'] });
+          if (user) {
+            const roles = user.related('roles').models.map(r => r.get('name'));
+            const isAdminOrOwner = roles.includes('Administrator') || roles.includes('Owner');
+            if (isAdminOrOwner) {
+              return next();
+            }
+          }
+        } else {
+          // Fallback if models are not loaded (e.g. dev/test)
+          return next();
+        }
       }
     } catch (err) {
       console.error('[Mailconfig Auth] Error verifying session:', err.message);

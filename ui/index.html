@@ -432,11 +432,12 @@
 
   <script>
     const fieldDefs = {
-      smtp: ['host', 'port', 'user', 'pass'],
-      mailgun: ['apiKey', 'domain']
+      smtp: ['from', 'host', 'port', 'user', 'pass'],
+      mailgun: ['from', 'apiKey', 'domain']
     };
 
     const labels = {
+      from: 'Default From Address',
       host: 'SMTP Host',
       port: 'SMTP Port',
       user: 'SMTP Username',
@@ -446,6 +447,7 @@
     };
 
     const helpers = {
+      from: 'The default sender email address for system notifications (e.g. "noreply@yourdomain.com" or "Site Admin <admin@yourdomain.com>").',
       host: 'The server address of your SMTP provider (e.g. smtp.mailgun.org, smtp.sendgrid.net, smtp.gmail.com).',
       port: 'The connection port. Typically 587 for secure STARTTLS, or 465 for SSL/TLS.',
       user: 'Authentication username for your SMTP server.',
@@ -663,6 +665,7 @@
           if (config.transport === 'SMTP') {
             document.getElementById('provider').value = 'smtp';
             renderFields();
+            if (document.getElementById('f_from')) document.getElementById('f_from').value = config.from || '';
             if (config.options) {
               if (document.getElementById('f_host')) document.getElementById('f_host').value = config.options.host || '';
               if (document.getElementById('f_port')) document.getElementById('f_port').value = config.options.port || '';
@@ -674,6 +677,7 @@
           } else if (config.transport === 'Mailgun') {
             document.getElementById('provider').value = 'mailgun';
             renderFields();
+            if (document.getElementById('f_from')) document.getElementById('f_from').value = config.from || '';
             if (config.options && config.options.auth) {
               if (document.getElementById('f_apiKey')) document.getElementById('f_apiKey').value = config.options.auth.api_key || '';
               if (document.getElementById('f_domain')) document.getElementById('f_domain').value = config.options.auth.domain || '';

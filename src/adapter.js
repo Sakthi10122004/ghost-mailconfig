@@ -251,6 +251,30 @@ class MailconfigAdapter extends SchedulingDefault {
 
         // 3. Hook GhostMailer to apply SMTP config dynamically
         hookGhostMailer();
+
+        // 4. Update Ghost's in-memory nconf config on boot/injection
+        try {
+            const configWriter = require('./configWriter');
+            const savedConfig = configWriter.read();
+            if (savedConfig && savedConfig.mail) {
+                MailconfigAdapter.updateConfig(savedConfig.mail);
+            }
+        } catch (err) {}
+    }
+
+    static updateConfig(mailBlock) {
+        try {
+            const configPath = getGhostPath('core/shared/config');
+            if (configPath) {
+                const ghostConfig = require(configPath);
+                if (ghostConfig && typeof ghostConfig.set === 'function') {
+                    ghostConfig.set('mail', mailBlock);
+                    console.log('[Mailconfig] Successfully updated Ghost in-memory config object');
+                }
+            }
+        } catch (e) {
+            console.error('[Mailconfig] Failed to update in-memory config:', e.message);
+        }
     }
 }
 

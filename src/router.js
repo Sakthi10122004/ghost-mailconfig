@@ -106,7 +106,18 @@ router.post('/api/save', (req, res) => {
 
   const mailBlock = schema.build(fields);
   configWriter.writeMail(mailBlock);
-  res.json({ ok: true, message: 'Configuration attributes written successfully. Restart Ghost to apply updates.' });
+
+  // Sync in-memory configuration immediately
+  try {
+      const MailconfigAdapter = require('./adapter');
+      if (MailconfigAdapter && typeof MailconfigAdapter.updateConfig === 'function') {
+          MailconfigAdapter.updateConfig(mailBlock);
+      }
+  } catch (err) {
+      console.error('[Mailconfig Router] Failed to update dynamic config in-memory:', err.message);
+  }
+
+  res.json({ ok: true, message: 'Configuration saved successfully.' });
 });
 
 module.exports = router;

@@ -2,9 +2,8 @@ module.exports = {
   smtp: {
     label: 'Custom SMTP',
     transport: 'SMTP',
-    fields: ['from', 'host', 'port', 'user', 'pass'],
+    fields: ['host', 'port', 'user', 'pass'],
     build: (f) => ({
-      from: f.from,
       transport: 'SMTP',
       options: { 
         host: f.host, 
@@ -16,9 +15,8 @@ module.exports = {
   mailgun: {
     label: 'Mailgun',
     transport: 'Mailgun',
-    fields: ['from', 'apiKey', 'domain'],
+    fields: ['apiKey', 'domain'],
     build: (f) => ({
-      from: f.from,
       transport: 'Mailgun',
       options: { auth: { api_key: f.apiKey, domain: f.domain } }
     })

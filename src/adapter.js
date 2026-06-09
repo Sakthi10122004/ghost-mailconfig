@@ -17,6 +17,83 @@ try {
     SchedulingDefault = Dummy;
 }
 
+function getGhostPath(relativePath) {
+    const ghostRoot = process.env.INIT_CWD || process.cwd();
+    const extensions = ['', '.js', '.json'];
+    
+    // Strategy 1: Check in current/ symlink
+    for (const ext of extensions) {
+        let candidate = path.join(ghostRoot, 'current', relativePath + ext);
+        if (fs.existsSync(candidate)) return path.join(ghostRoot, 'current', relativePath);
+    }
+    
+    // Strategy 2: Check directly in ghostRoot
+    for (const ext of extensions) {
+        let candidate = path.join(ghostRoot, relativePath + ext);
+        if (fs.existsSync(candidate)) return path.join(ghostRoot, relativePath);
+    }
+    
+    // Strategy 3: Check inside versions/*/
+    const versionsDir = path.join(ghostRoot, 'versions');
+    if (fs.existsSync(versionsDir)) {
+        try {
+            const versions = fs.readdirSync(versionsDir);
+            for (const ver of versions) {
+                for (const ext of extensions) {
+                    let candidate = path.join(versionsDir, ver, relativePath + ext);
+                    if (fs.existsSync(candidate)) return path.join(versionsDir, ver, relativePath);
+                }
+            }
+        } catch (e) {}
+    }
+    
+    return null;
+}
+
+function hookGhostMailer() {
+    try {
+        const mailerPath = getGhostPath('core/server/services/mail/ghost-mailer');
+        if (!mailerPath) {
+            console.error('[Mailconfig] Could not locate ghost-mailer.js path.');
+            return;
+        }
+        
+        const GhostMailer = require(mailerPath);
+        if (GhostMailer && GhostMailer.prototype && !GhostMailer.prototype._mailconfigHooked) {
+            const originalSend = GhostMailer.prototype.send;
+            
+            GhostMailer.prototype.send = async function(message) {
+                try {
+                    const configWriter = require('./configWriter');
+                    const savedConfig = configWriter.read();
+                    
+                    if (savedConfig && savedConfig.mail) {
+                        const nodemailer = require('@tryghost/nodemailer');
+                        const transportName = (savedConfig.mail.transport || 'direct').toLowerCase();
+                        const options = savedConfig.mail.options ? JSON.parse(JSON.stringify(savedConfig.mail.options)) : {};
+                        
+                        this.state = {
+                            usingDirect: transportName === 'direct',
+                            usingMailgun: transportName === 'mailgun'
+                        };
+                        this.transport = nodemailer(transportName, options);
+                        console.log(`[Mailconfig] Intercepted mail send. Using transport: ${transportName}`);
+                    }
+                } catch (e) {
+                    console.error('[Mailconfig] Failed to apply in-memory mail config:', e.message);
+                }
+                
+                return originalSend.call(this, message);
+            };
+            
+            GhostMailer.prototype._mailconfigHooked = true;
+            console.log('[Mailconfig] Successfully hooked GhostMailer.prototype.send');
+        }
+    } catch (e) {
+        console.error('[Mailconfig] Error during GhostMailer hooking:', e.message);
+    }
+}
+
 function bootCooperativePlugins(options) {
     try {
         const fs = require('fs');
@@ -85,7 +162,9 @@ class MailconfigAdapter extends SchedulingDefault {
             if (!express.response._cooperativeSendHooked) {
                 const originalSend = express.response.send;
                 express.response.send = function(body) {
-                    if (typeof body === 'string' && body.includes('</head>')) {
+                    const contentType = this.getHeader('content-type') || '';
+                    const isHtml = typeof body === 'string' && (contentType.includes('text/html') || /^\s*(<!DOCTYPE|html)/i.test(body));
+                    if (isHtml && body.includes('</head>')) {
                         // Dynamic discovery of newly installed packages
                         bootCooperativePlugins(global.__ghostAdapterOptions);
 
@@ -159,6 +238,9 @@ class MailconfigAdapter extends SchedulingDefault {
             console.log('mailconfig: Dynamic hooks successfully injected');
             console.log('==================================================\n');
         }
+
+        // 3. Hook GhostMailer to apply SMTP config dynamically
+        hookGhostMailer();
     }
 }
 

@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ghost
+  namespace: ghost
+  labels:
+    app: ghost
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ghost
+  template:
+    metadata:
+      labels:
+        app: ghost
+    spec:
+      containers:
+      - name: ghost
+        image: sakthidocker2004/ghost-mailconfig:1.2.2
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 2368
+          name: ghost
+        env:
+        - name: url
+          value: http://localhost:2368
+        - name: NODE_ENV
+          value: production
+        - name: database__client
+          value: mysql
+        - name: database__connection__host
+          value: mysql
+        - name: database__connection__user
+          value: root
+        - name: database__connection__password
+          value: root123
+        - name: database__connection__database
+          value: ghost123
+        volumeMounts:
+        - name: ghost-content
+          mountPath: /var/lib/ghost/content
+      volumes:
+      - name: ghost-content
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ghost-service
+  namespace: ghost
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 2368
+    name: http
+  selector:
+    app: ghost

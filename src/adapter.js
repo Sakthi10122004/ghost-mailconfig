@@ -68,7 +68,17 @@ function hookGhostMailer() {
                     const savedConfig = configWriter.read();
                     
                     if (savedConfig && savedConfig.mail) {
-                        const nodemailer = require('@tryghost/nodemailer');
+                        let nodemailer;
+                        try {
+                            nodemailer = require('@tryghost/nodemailer');
+                        } catch (err) {
+                            const nodemailerPath = getGhostPath('node_modules/@tryghost/nodemailer');
+                            if (nodemailerPath) {
+                                nodemailer = require(nodemailerPath);
+                            } else {
+                                throw err;
+                            }
+                        }
                         const transportName = (savedConfig.mail.transport || 'direct').toLowerCase();
                         const options = savedConfig.mail.options ? JSON.parse(JSON.stringify(savedConfig.mail.options)) : {};
                         

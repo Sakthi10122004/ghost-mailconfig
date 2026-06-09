@@ -1,7 +1,10 @@
 FROM ghost:latest
 
-# Step 1: Install your plugin directly inside the image files
-RUN npm install @sakthi10122004/mailconfig@latest --global-style
+# Step 1: Copy the local plugin package to the container
+COPY . /var/lib/ghost/node_modules/@sakthi10122004/mailconfig
+
+# Install any dependencies of the plugin
+RUN cd /var/lib/ghost/node_modules/@sakthi10122004/mailconfig && npm install --only=production
 
 # Step 2: Inject the custom configuration trick into the production config file
 RUN node -e " \

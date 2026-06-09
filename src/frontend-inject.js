@@ -216,7 +216,7 @@
         id: 'mailconfig',
         name: 'Mail Transport',
         description: 'Configure custom mail SMTP settings, credentials, and email delivery providers natively.',
-        version: '__VERSION_PLACEHOLDER__',
+        version: '__VERSION_PLACEHOLDER__' === '__' + 'VERSION_PLACEHOLDER__' ? '1.2.0' : '__VERSION_PLACEHOLDER__',
         icon: `
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>

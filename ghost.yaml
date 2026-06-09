@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: ghost
-        image: sakthidocker2004/ghost-mailconfig:1.2.4
+        image: sakthidocker2004/ghost-mailconfig:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 2368

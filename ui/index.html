@@ -373,6 +373,34 @@
       background: var(--danger-zone-bg);
       border-color: var(--danger-zone-text);
     }
+
+    /* Mobile Responsive Overrides */
+    @media (max-width: 600px) {
+      .gh-header {
+        padding: 12px 16px;
+        height: auto;
+        min-height: 56px;
+      }
+      .gh-main-container {
+        padding: 16px;
+      }
+      .gh-page-title {
+        font-size: 22px;
+      }
+      .gh-page-description {
+        margin-bottom: 20px;
+      }
+      .gh-danger-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+        text-align: center;
+        padding: 16px;
+      }
+      .gh-btn-danger {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>

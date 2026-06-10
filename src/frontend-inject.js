@@ -93,9 +93,20 @@
     }
 
     // ── Installed Plugins Dashboard Overlay UI ────────────────────────
-    window.openPluginsDashboard = function() {
+    window.openPluginsDashboard = async function() {
         if (document.getElementById('ghost-plugins-overlay')) return;
         
+        let isMailActive = false;
+        try {
+            const res = await fetch('/ghost/mailconfig/api/config');
+            if (res.ok) {
+                const config = await res.json();
+                isMailActive = !!(config && config.transport);
+            }
+        } catch (e) {
+            console.error('[Mailconfig] Failed to fetch active status:', e);
+        }
+
         const isDark = document.documentElement.classList.contains('dark');
         const overlay = document.createElement('div');
         overlay.id = 'ghost-plugins-overlay';
@@ -111,22 +122,27 @@
         const registry = window.__ghostPlugins.registry || [];
         
         registry.forEach(plugin => {
+            const isActive = plugin.id === 'mailconfig' ? isMailActive : true;
+            const statusColor = isActive ? (isDark ? '#34d399' : '#10b981') : (isDark ? '#9ca3af' : '#6b7280');
+            const statusText = isActive ? 'Active' : 'Inactive';
+            const shadowStyle = isActive ? `box-shadow: 0 0 8px ${statusColor};` : '';
+
             cardsHtml += `
                 <div class="plugin-card" style="display: flex; align-items: center; padding: 18px; background: ${isDark ? '#191b1f' : '#f9fafb'}; border: 1px solid ${isDark ? '#2a2e35' : '#e5e7eb'}; border-radius: 10px; margin-bottom: 12px; transition: all 0.2s ease;">
                     <div class="plugin-icon" style="width: 42px; height: 42px; border-radius: 8px; background: ${isDark ? '#24272d' : '#f3f4f6'}; display: flex; justify-content: center; align-items: center; margin-right: 16px; color: ${isDark ? '#e1e3e6' : '#1f2937'}; flex-shrink: 0;">
                         ${plugin.icon || ''}
                     </div>
-                    <div style="flex-grow: 1; min-width: 0; margin-right: 16px;">
+                    <div class="plugin-card-body" style="flex-grow: 1; min-width: 0; margin-right: 16px;">
                         <div style="display: flex; align-items: center; margin-bottom: 4px;">
                             <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: ${isDark ? '#f3f4f6' : '#111827'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${plugin.name}</h4>
                             <span style="font-size: 11px; color: ${isDark ? '#9ca3af' : '#6b7280'}; margin-left: 8px; padding: 1px 6px; background: ${isDark ? '#24272d' : '#f3f4f6'}; border-radius: 4px; font-weight: 500;">v${plugin.version || '1.0.0'}</span>
                         </div>
                         <p style="margin: 0; font-size: 13px; color: ${isDark ? '#9ca3af' : '#4b5563'}; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${plugin.description || ''}</p>
                     </div>
-                    <div style="display: flex; align-items: center; flex-shrink: 0;">
-                        <span style="display: flex; align-items: center; margin-right: 16px; font-size: 13px; color: ${isDark ? '#34d399' : '#10b981'}; font-weight: 500;">
-                            <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${isDark ? '#34d399' : '#10b981'}; display: inline-block; margin-right: 6px; box-shadow: 0 0 8px ${isDark ? '#34d399' : '#10b981'};"></span>
-                            Active
+                    <div class="plugin-card-actions" style="display: flex; align-items: center; flex-shrink: 0;">
+                        <span style="display: flex; align-items: center; margin-right: 16px; font-size: 13px; color: ${statusColor}; font-weight: 500;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${statusColor}; display: inline-block; margin-right: 6px; ${shadowStyle}"></span>
+                            ${statusText}
                         </span>
                         <button onclick="window.__ghostPlugins.manage('${plugin.id}')" style="padding: 6px 14px; font-size: 13px; font-weight: 500; border-radius: 6px; border: 1px solid ${isDark ? '#3a404a' : '#d1d5db'}; background: ${isDark ? '#24272d' : '#ffffff'}; color: ${isDark ? '#f3f4f6' : '#374151'}; cursor: pointer; transition: all 0.15s ease;">Configure</button>
                     </div>
@@ -140,6 +156,31 @@
                 @keyframes pluginsFadeOut { from { opacity: 1; } to { opacity: 0; } }
                 @keyframes pluginsSlideIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
                 @keyframes pluginsSlideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(12px); opacity: 0; } }
+                
+                @media (max-width: 650px) {
+                    #ghost-plugins-modal-box {
+                        width: 100% !important;
+                        height: 100% !important;
+                        max-height: 100% !important;
+                        border-radius: 0 !important;
+                    }
+                    .plugin-card {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        padding: 16px !important;
+                    }
+                    .plugin-card-body {
+                        margin-right: 0 !important;
+                        margin-bottom: 12px !important;
+                        width: 100% !important;
+                    }
+                    .plugin-card-actions {
+                        width: 100% !important;
+                        justify-content: space-between !important;
+                        display: flex !important;
+                        align-items: center !important;
+                    }
+                }
             </style>
             <div id="ghost-plugins-modal-box" style="width: 90%; max-width: 680px; height: 80%; max-height: 600px; background: ${isDark ? '#15171a' : '#ffffff'}; border: 1px solid ${isDark ? '#24272c' : '#f0f3f6'}; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); display: flex; flex-direction: column; animation: pluginsSlideIn 0.25s cubic-bezier(0.19, 1, 0.22, 1);">
                 <div style="padding: 24px; border-bottom: 1px solid ${isDark ? '#24272c' : '#f0f3f6'}; display: flex; justify-content: space-between; align-items: center;">
@@ -191,6 +232,15 @@
                 @keyframes mailconfigFadeOut { from { opacity: 1; } to { opacity: 0; } }
                 @keyframes mailconfigSlideIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
                 @keyframes mailconfigSlideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(12px); opacity: 0; } }
+                
+                @media (max-width: 650px) {
+                    #mailconfig-modal-box {
+                        width: 100% !important;
+                        height: 100% !important;
+                        max-height: 100% !important;
+                        border-radius: 0 !important;
+                    }
+                }
             </style>
             <div id="mailconfig-modal-box" style="width: 90%; max-width: 680px; height: 85%; max-height: 800px; background: ${isDark ? '#15171a' : '#ffffff'}; border: 1px solid ${isDark ? '#24272c' : '#f0f3f6'}; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.15); display: flex; flex-direction: column; animation: mailconfigSlideIn 0.25s cubic-bezier(0.19, 1, 0.22, 1);">
                 <iframe src="/ghost/mailconfig/" style="width: 100%; height: 100%; border: none; background: transparent;"></iframe>

@@ -537,14 +537,36 @@
       }
     }
 
+    function updatePasswordToggleVisibility(inputId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const wrapper = input.parentElement;
+      const toggleBtn = wrapper.querySelector('.gh-password-toggle');
+      if (toggleBtn) {
+        if (input.value === '••••••••' || input.value === '') {
+          toggleBtn.style.display = 'none';
+          input.type = 'password';
+        } else {
+          toggleBtn.style.display = 'flex';
+        }
+      }
+    }
+
+    function handleInput(e) {
+      checkChanges();
+      if (e.target.id === 'f_pass' || e.target.id === 'f_apiKey') {
+        updatePasswordToggleVisibility(e.target.id);
+      }
+    }
+
     function attachListeners() {
       document.getElementById('provider').removeEventListener('change', checkChanges);
       document.getElementById('provider').addEventListener('change', checkChanges);
       
       const inputs = document.querySelectorAll('#fields input');
       inputs.forEach(input => {
-        input.removeEventListener('input', checkChanges);
-        input.addEventListener('input', checkChanges);
+        input.removeEventListener('input', handleInput);
+        input.addEventListener('input', handleInput);
       });
     }
 
@@ -576,6 +598,9 @@
       
       attachListeners();
       checkChanges();
+      
+      updatePasswordToggleVisibility('f_pass');
+      updatePasswordToggleVisibility('f_apiKey');
     }
 
     function togglePassword(inputId, btn) {
@@ -599,7 +624,12 @@
         const fields = data.fields;
         for (const key in fields) {
           const input = document.getElementById('f_' + key);
-          if (input) input.value = fields[key];
+          if (input) {
+            input.value = fields[key];
+            if (key === 'pass' || key === 'apiKey') {
+              updatePasswordToggleVisibility('f_' + key);
+            }
+          }
         }
       } catch (e) {
         console.error('Reversion error:', e);
@@ -625,8 +655,7 @@
         
         showAlert(d.ok, d.message || d.error);
         if (d.ok) {
-          originalState = getFormState();
-          checkChanges();
+          await init();
         }
       } catch (e) {
         showAlert(false, 'Network connection issue. Save failed.');
@@ -709,6 +738,9 @@
           }
         }
       } catch (e) {}
+      
+      updatePasswordToggleVisibility('f_pass');
+      updatePasswordToggleVisibility('f_apiKey');
       
       originalState = getFormState();
       checkChanges();

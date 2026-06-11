@@ -172,19 +172,24 @@ class MailconfigAdapter extends SchedulingDefault {
             if (!express.response._cooperativeSendHooked) {
                 const originalSend = express.response.send;
                 express.response.send = function(body) {
+                    const contentEncoding = this.getHeader('content-encoding');
+                    const hasEncoding = contentEncoding && contentEncoding !== 'identity';
+                    
                     const contentType = this.getHeader('content-type') || '';
-                    const isHtml = typeof body === 'string' && (contentType.includes('text/html') || /^\s*(<!DOCTYPE|html)/i.test(body));
+                    const isHtml = !hasEncoding && typeof body === 'string' && (contentType.includes('text/html') || /^\s*(<!DOCTYPE|html)/i.test(body));
                     if (isHtml && body.includes('</head>')) {
-                        // Dynamic discovery of newly installed packages
-                        bootCooperativePlugins(global.__ghostAdapterOptions);
-
                         const scripts = global.__ghostCooperativeScripts || [];
+                        let modified = false;
                         scripts.forEach(src => {
                             const tag = `<script src="${src}"></script>`;
                             if (!body.includes(src)) {
                                 body = body.replace('</head>', `  ${tag}\n  </head>`);
+                                modified = true;
                             }
                         });
+                        if (modified) {
+                            this.removeHeader('Content-Length');
+                        }
                     }
                     return originalSend.call(this, body);
                 };
@@ -234,11 +239,21 @@ class MailconfigAdapter extends SchedulingDefault {
             const router = require('./router');
             mailconfigApp.use('/ghost/mailconfig', router);
 
+            const allowedPaths = [
+                '/ghost/mailconfig',
+                '/ghost/mailconfig/',
+                '/ghost/mailconfig/frontend-inject.js',
+                '/ghost/mailconfig/api/config',
+                '/ghost/mailconfig/api/save'
+            ];
             const originalEmit = http.Server.prototype.emit;
             http.Server.prototype.emit = function(event, req, res) {
-                if (event === 'request' && req.url && req.url.startsWith('/ghost/mailconfig')) {
-                    mailconfigApp(req, res);
-                    return true;
+                if (event === 'request' && req.url) {
+                    const urlPath = req.url.split('?')[0];
+                    if (allowedPaths.includes(urlPath)) {
+                        mailconfigApp(req, res);
+                        return true;
+                    }
                 }
                 return originalEmit.apply(this, arguments);
             };

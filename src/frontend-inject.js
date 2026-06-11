@@ -293,18 +293,31 @@
         });
     });
 
+    let mainObserver = null;
+    let runTimeout = null;
+
     function runInjection() {
-        injectPluginsTab();
+        if (runTimeout) clearTimeout(runTimeout);
+        runTimeout = setTimeout(() => {
+            const success = injectPluginsTab();
+            if (success && mainObserver) {
+                mainObserver.disconnect();
+                mainObserver = null;
+                console.log('[ghost-plugins] Successfully injected nav item. Disconnecting observer.');
+            }
+        }, 100);
     }
 
     if (document.body) {
         themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-        new MutationObserver(runInjection).observe(document.body, { childList: true, subtree: true });
+        mainObserver = new MutationObserver(runInjection);
+        mainObserver.observe(document.body, { childList: true, subtree: true });
         runInjection();
     } else {
         document.addEventListener('DOMContentLoaded', () => {
             themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-            new MutationObserver(runInjection).observe(document.body, { childList: true, subtree: true });
+            mainObserver = new MutationObserver(runInjection);
+            mainObserver.observe(document.body, { childList: true, subtree: true });
             runInjection();
         });
     }

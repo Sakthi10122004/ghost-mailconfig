@@ -79,22 +79,10 @@ async function requireAdminAuth(req, res, next) {
               return next();
             }
           }
-        } else {
-          // Fallback if models are not loaded (e.g. dev/test)
-          return next();
         }
       }
     } catch (err) {
       console.error('[Mailconfig Auth] Error verifying session:', err.message);
-    }
-  }
-
-  // Fallback for isolated development/test environments
-  const isDevFallback = process.env.NODE_ENV !== 'production' && !getGhostPath('core/server/services/auth/session/express-session');
-  if (isDevFallback) {
-    const cookies = req.headers.cookie || '';
-    if (cookies.includes('ghost-admin-api-session')) {
-      return next();
     }
   }
 
@@ -109,19 +97,134 @@ router.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../ui/index.html'));
 });
 
-// GET current running mail config settings
+// GET current running mail config settings with masked secrets
 router.get('/api/config', (req, res) => {
   const config = configWriter.read();
-  res.json(config.mail || {});
+  const mailConfig = JSON.parse(JSON.stringify(config.mail || {}));
+  
+  if (mailConfig.options && mailConfig.options.auth) {
+    if (mailConfig.options.auth.pass) {
+      mailConfig.options.auth.pass = '••••••••';
+    }
+    if (mailConfig.options.auth.api_key) {
+      mailConfig.options.auth.api_key = '••••••••';
+    }
+  }
+  res.json(mailConfig);
 });
 
 // POST save incoming configuration adjustments
 router.post('/api/save', (req, res) => {
+  // Same-Origin Protection
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const host = req.headers.host;
+  
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+      if (originUrl.host !== host) {
+        return res.status(403).json({ error: 'Forbidden. Origin mismatch.' });
+      }
+    } catch (e) {
+      return res.status(403).json({ error: 'Forbidden. Invalid origin header.' });
+    }
+  } else if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      if (refererUrl.host !== host) {
+        return res.status(403).json({ error: 'Forbidden. Referer mismatch.' });
+      }
+    } catch (e) {
+      return res.status(403).json({ error: 'Forbidden. Invalid referer header.' });
+    }
+  } else {
+    return res.status(403).json({ error: 'Forbidden. Missing Origin or Referer header.' });
+  }
+
   const { provider, fields } = req.body;
   
+  // Validate provider name
+  if (!['smtp', 'mailgun', 'reset'].includes(provider)) {
+    return res.status(400).json({ error: 'Invalid provider name.' });
+  }
+
+  // Reject prototype pollution keys in body or fields
+  const isSafeKey = key => key !== '__proto__' && key !== 'constructor' && key !== 'prototype';
+  const allKeys = [...Object.keys(req.body || {}), ...(fields ? Object.keys(fields) : [])];
+  if (allKeys.some(k => !isSafeKey(k))) {
+    return res.status(400).json({ error: 'Invalid field keys detected.' });
+  }
+
   if (provider === 'reset') {
     configWriter.writeMail(undefined);
     return res.json({ ok: true, message: 'Configuration reset. Restart Ghost to apply.' });
+  }
+
+  const allowedFields = {
+    smtp: ['host', 'port', 'user', 'pass'],
+    mailgun: ['apiKey', 'domain']
+  };
+
+  if (!fields || typeof fields !== 'object') {
+    return res.status(400).json({ error: 'Missing fields object.' });
+  }
+
+  const expectedFields = allowedFields[provider];
+  const actualFields = Object.keys(fields);
+  
+  // Verify no unexpected fields
+  for (const key of actualFields) {
+    if (!expectedFields.includes(key)) {
+      return res.status(400).json({ error: `Unexpected field: ${key}` });
+    }
+  }
+  
+  // Verify all expected fields exist and validate them
+  for (const key of expectedFields) {
+    const val = fields[key];
+    if (val === undefined || val === null) {
+      return res.status(400).json({ error: `Missing required field: ${key}` });
+    }
+    
+    if (key === 'port') {
+      const portInt = parseInt(val, 10);
+      if (isNaN(portInt) || portInt < 1 || portInt > 65535 || String(val).includes('.')) {
+        return res.status(400).json({ error: 'SMTP Port must be a valid integer between 1 and 65535.' });
+      }
+    } else {
+      if (typeof val !== 'string') {
+        return res.status(400).json({ error: `Field ${key} must be a string.` });
+      }
+      if (val.length === 0) {
+        return res.status(400).json({ error: `Field ${key} cannot be empty.` });
+      }
+      if (val.length > 255) {
+        return res.status(400).json({ error: `Field ${key} exceeds maximum length of 255 characters.` });
+      }
+    }
+  }
+
+  // Preserve existing secrets if masked values are sent
+  const currentConfig = configWriter.read();
+  const currentMail = currentConfig.mail || {};
+  
+  if (provider === 'smtp') {
+    if (fields.pass === '••••••••') {
+      if (currentMail.transport === 'SMTP' && currentMail.options && currentMail.options.auth && currentMail.options.auth.pass) {
+        fields.pass = currentMail.options.auth.pass;
+      } else {
+        return res.status(400).json({ error: 'No existing SMTP password found to preserve.' });
+      }
+    }
+  } else if (provider === 'mailgun') {
+    if (fields.apiKey === '••••••••') {
+      if (currentMail.transport === 'Mailgun' && currentMail.options && currentMail.options.auth && currentMail.options.auth.api_key) {
+        fields.apiKey = currentMail.options.auth.api_key;
+      } else {
+        return res.status(400).json({ error: 'No existing Mailgun API key found to preserve.' });
+      }
+    }
   }
 
   const schema = providers[provider];

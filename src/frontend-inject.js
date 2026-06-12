@@ -118,8 +118,25 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         `;
         
-        let cardsHtml = '';
+        const TRUSTED_ICONS = {
+            mailconfig: `
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+            `.trim()
+        };
+
+        const GENERIC_TRUSTED_ICON = `
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+            </svg>
+        `.trim();
+
         const registry = window.__ghostPlugins.registry || [];
+        const cardsContainer = document.createElement('div');
         
         registry.forEach(plugin => {
             const isActive = plugin.id === 'mailconfig' ? isMailActive : true;
@@ -127,27 +144,73 @@
             const statusText = isActive ? 'Active' : 'Inactive';
             const shadowStyle = isActive ? `box-shadow: 0 0 8px ${statusColor};` : '';
 
-            cardsHtml += `
-                <div class="plugin-card" style="display: flex; align-items: center; padding: 18px; background: ${isDark ? '#191b1f' : '#f9fafb'}; border: 1px solid ${isDark ? '#2a2e35' : '#e5e7eb'}; border-radius: 10px; margin-bottom: 12px; transition: all 0.2s ease;">
-                    <div class="plugin-icon" style="width: 42px; height: 42px; border-radius: 8px; background: ${isDark ? '#24272d' : '#f3f4f6'}; display: flex; justify-content: center; align-items: center; margin-right: 16px; color: ${isDark ? '#e1e3e6' : '#1f2937'}; flex-shrink: 0;">
-                        ${plugin.icon || ''}
-                    </div>
-                    <div class="plugin-card-body" style="flex-grow: 1; min-width: 0; margin-right: 16px;">
-                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                            <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: ${isDark ? '#f3f4f6' : '#111827'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${plugin.name}</h4>
-                            <span style="font-size: 11px; color: ${isDark ? '#9ca3af' : '#6b7280'}; margin-left: 8px; padding: 1px 6px; background: ${isDark ? '#24272d' : '#f3f4f6'}; border-radius: 4px; font-weight: 500;">v${plugin.version || '1.0.0'}</span>
-                        </div>
-                        <p style="margin: 0; font-size: 13px; color: ${isDark ? '#9ca3af' : '#4b5563'}; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${plugin.description || ''}</p>
-                    </div>
-                    <div class="plugin-card-actions" style="display: flex; align-items: center; flex-shrink: 0;">
-                        <span style="display: flex; align-items: center; margin-right: 16px; font-size: 13px; color: ${statusColor}; font-weight: 500;">
-                            <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${statusColor}; display: inline-block; margin-right: 6px; ${shadowStyle}"></span>
-                            ${statusText}
-                        </span>
-                        <button onclick="window.__ghostPlugins.manage('${plugin.id}')" style="padding: 6px 14px; font-size: 13px; font-weight: 500; border-radius: 6px; border: 1px solid ${isDark ? '#3a404a' : '#d1d5db'}; background: ${isDark ? '#24272d' : '#ffffff'}; color: ${isDark ? '#f3f4f6' : '#374151'}; cursor: pointer; transition: all 0.15s ease;">Configure</button>
-                    </div>
-                </div>
-            `;
+            // Main card container
+            const card = document.createElement('div');
+            card.className = 'plugin-card';
+            card.style.cssText = `display: flex; align-items: center; padding: 18px; background: ${isDark ? '#191b1f' : '#f9fafb'}; border: 1px solid ${isDark ? '#2a2e35' : '#e5e7eb'}; border-radius: 10px; margin-bottom: 12px; transition: all 0.2s ease;`;
+
+            // Plugin icon container
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'plugin-icon';
+            iconDiv.style.cssText = `width: 42px; height: 42px; border-radius: 8px; background: ${isDark ? '#24272d' : '#f3f4f6'}; display: flex; justify-content: center; align-items: center; margin-right: 16px; color: ${isDark ? '#e1e3e6' : '#1f2937'}; flex-shrink: 0;`;
+            iconDiv.innerHTML = TRUSTED_ICONS[plugin.id] || GENERIC_TRUSTED_ICON;
+            card.appendChild(iconDiv);
+
+            // Card body
+            const bodyDiv = document.createElement('div');
+            bodyDiv.className = 'plugin-card-body';
+            bodyDiv.style.cssText = 'flex-grow: 1; min-width: 0; margin-right: 16px;';
+
+            // Title block
+            const titleBlock = document.createElement('div');
+            titleBlock.style.cssText = 'display: flex; align-items: center; margin-bottom: 4px;';
+
+            const title = document.createElement('h4');
+            title.style.cssText = `margin: 0; font-size: 15px; font-weight: 600; color: ${isDark ? '#f3f4f6' : '#111827'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`;
+            title.textContent = plugin.name;
+            titleBlock.appendChild(title);
+
+            const versionSpan = document.createElement('span');
+            versionSpan.style.cssText = `font-size: 11px; color: ${isDark ? '#9ca3af' : '#6b7280'}; margin-left: 8px; padding: 1px 6px; background: ${isDark ? '#24272d' : '#f3f4f6'}; border-radius: 4px; font-weight: 500;`;
+            versionSpan.textContent = 'v' + (plugin.version || '1.0.0');
+            titleBlock.appendChild(versionSpan);
+
+            bodyDiv.appendChild(titleBlock);
+
+            // Description
+            const description = document.createElement('p');
+            description.style.cssText = `margin: 0; font-size: 13px; color: ${isDark ? '#9ca3af' : '#4b5563'}; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;`;
+            description.textContent = plugin.description || '';
+            bodyDiv.appendChild(description);
+
+            card.appendChild(bodyDiv);
+
+            // Actions block
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'plugin-card-actions';
+            actionsDiv.style.cssText = 'display: flex; align-items: center; flex-shrink: 0;';
+
+            const statusSpan = document.createElement('span');
+            statusSpan.style.cssText = `display: flex; align-items: center; margin-right: 16px; font-size: 13px; color: ${statusColor}; font-weight: 500;`;
+
+            const statusDot = document.createElement('span');
+            statusDot.style.cssText = `width: 8px; height: 8px; border-radius: 50%; background-color: ${statusColor}; display: inline-block; margin-right: 6px; ${shadowStyle}`;
+            statusSpan.appendChild(statusDot);
+            
+            const statusTextNode = document.createTextNode(statusText);
+            statusSpan.appendChild(statusTextNode);
+            actionsDiv.appendChild(statusSpan);
+
+            const configureBtn = document.createElement('button');
+            configureBtn.style.cssText = `padding: 6px 14px; font-size: 13px; font-weight: 500; border-radius: 6px; border: 1px solid ${isDark ? '#3a404a' : '#d1d5db'}; background: ${isDark ? '#24272d' : '#ffffff'}; color: ${isDark ? '#f3f4f6' : '#374151'}; cursor: pointer; transition: all 0.15s ease;`;
+            configureBtn.textContent = 'Configure';
+            configureBtn.addEventListener('click', () => {
+                window.__ghostPlugins.manage(plugin.id);
+            });
+            actionsDiv.appendChild(configureBtn);
+
+            card.appendChild(actionsDiv);
+            cardsContainer.appendChild(card);
         });
         
         overlay.innerHTML = `
@@ -188,18 +251,37 @@
                         <h3 style="margin: 0 0 4px 0; font-size: 20px; font-weight: 700; color: ${isDark ? '#f3f4f6' : '#111827'};">Installed Plugins</h3>
                         <p style="margin: 0; font-size: 13.5px; color: ${isDark ? '#9ca3af' : '#6b7280'};">Manage and configure your custom Ghost extensions.</p>
                     </div>
-                    <button onclick="window.closePluginsDashboard()" style="background: none; border: none; color: ${isDark ? '#9ca3af' : '#6b7280'}; cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <button id="ghost-plugins-close-btn" style="background: none; border: none; color: ${isDark ? '#9ca3af' : '#6b7280'}; cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
-                <div style="flex-grow: 1; overflow-y: auto; padding: 24px;">
-                    ${cardsHtml || '<div style="text-align: center; padding: 48px 0; color: #6b7280;"><p style="margin: 0; font-size: 15px; font-weight: 500;">No active plugins detected.</p></div>'}
+                <div id="ghost-plugins-list" style="flex-grow: 1; overflow-y: auto; padding: 24px;">
                 </div>
             </div>
         `;
         
         overlay.addEventListener('click', (e) => { if (e.target === overlay) window.closePluginsDashboard(); });
         document.body.appendChild(overlay);
+
+        const closeBtn = overlay.querySelector('#ghost-plugins-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', window.closePluginsDashboard);
+        }
+
+        const listDiv = overlay.querySelector('#ghost-plugins-list');
+        if (listDiv) {
+            if (registry.length > 0) {
+                listDiv.appendChild(cardsContainer);
+            } else {
+                const emptyMsg = document.createElement('div');
+                emptyMsg.style.cssText = 'text-align: center; padding: 48px 0; color: #6b7280;';
+                const emptyText = document.createElement('p');
+                emptyText.style.cssText = 'margin: 0; font-size: 15px; font-weight: 500;';
+                emptyText.textContent = 'No active plugins detected.';
+                emptyMsg.appendChild(emptyText);
+                listDiv.appendChild(emptyMsg);
+            }
+        }
     };
 
     window.closePluginsDashboard = function() {

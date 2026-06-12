@@ -61,6 +61,27 @@ try {
   console.error('[Mailconfig Auth] Failed to load Ghost models:', err.message);
 }
 
+// Load Ghost's core config service dynamically to get URLs
+let ghostUrl = null;
+let ghostAdminUrl = null;
+try {
+  const configPath = getGhostPath('core/shared/config');
+  if (configPath) {
+    const ghostConfig = require(configPath);
+    if (ghostConfig && typeof ghostConfig.get === 'function') {
+      ghostUrl = ghostConfig.get('url');
+      const adminObj = ghostConfig.get('admin');
+      if (adminObj && typeof adminObj === 'object') {
+        ghostAdminUrl = adminObj.url;
+      } else {
+        ghostAdminUrl = ghostConfig.get('admin:url');
+      }
+    }
+  }
+} catch (e) {
+  console.error('[Mailconfig Auth] Failed to load Ghost URL config:', e.message);
+}
+
 // Authentication middleware to restrict route access to administrators
 async function requireAdminAuth(req, res, next) {
   // Allow frontend-inject.js to load without session auth
@@ -120,26 +141,47 @@ router.post('/api/save', (req, res) => {
   const referer = req.headers.referer;
   const host = req.headers.host;
   
-  if (origin) {
+  const allowedHosts = new Set();
+  if (host) {
+    allowedHosts.add(host.toLowerCase());
+  }
+  
+  const xForwardedHost = req.headers['x-forwarded-host'];
+  if (xForwardedHost) {
+    xForwardedHost.split(',').forEach(h => allowedHosts.add(h.trim().toLowerCase()));
+  }
+  
+  if (ghostAdminUrl) {
+    try { allowedHosts.add(new URL(ghostAdminUrl).host.toLowerCase()); } catch (e) {}
+  }
+  if (ghostUrl) {
+    try { allowedHosts.add(new URL(ghostUrl).host.toLowerCase()); } catch (e) {}
+  }
+
+  function isHostAllowed(urlStr) {
     try {
-      const originUrl = new URL(origin);
-      if (originUrl.host !== host) {
-        return res.status(403).json({ error: 'Forbidden. Origin mismatch.' });
-      }
+      const u = new URL(urlStr);
+      return allowedHosts.has(u.host.toLowerCase());
     } catch (e) {
-      return res.status(403).json({ error: 'Forbidden. Invalid origin header.' });
+      return false;
+    }
+  }
+  
+  if (origin) {
+    if (!isHostAllowed(origin)) {
+      return res.status(403).json({ error: 'Forbidden. Origin mismatch.' });
     }
   } else if (referer) {
-    try {
-      const refererUrl = new URL(referer);
-      if (refererUrl.host !== host) {
-        return res.status(403).json({ error: 'Forbidden. Referer mismatch.' });
-      }
-    } catch (e) {
-      return res.status(403).json({ error: 'Forbidden. Invalid referer header.' });
+    if (!isHostAllowed(referer)) {
+      return res.status(403).json({ error: 'Forbidden. Referer mismatch.' });
     }
   } else {
     return res.status(403).json({ error: 'Forbidden. Missing Origin or Referer header.' });
+  }
+
+  // Reject non-object bodies
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Invalid request body shape.' });
   }
 
   const { provider, fields } = req.body;
@@ -151,13 +193,18 @@ router.post('/api/save', (req, res) => {
 
   // Reject prototype pollution keys in body or fields
   const isSafeKey = key => key !== '__proto__' && key !== 'constructor' && key !== 'prototype';
-  const allKeys = [...Object.keys(req.body || {}), ...(fields ? Object.keys(fields) : [])];
+  const allKeys = [...Object.keys(req.body), ...(fields && typeof fields === 'object' && !Array.isArray(fields) ? Object.keys(fields) : [])];
   if (allKeys.some(k => !isSafeKey(k))) {
     return res.status(400).json({ error: 'Invalid field keys detected.' });
   }
 
   if (provider === 'reset') {
-    configWriter.writeMail(undefined);
+    try {
+      configWriter.writeMail(undefined);
+    } catch (err) {
+      console.error('[Mailconfig Router] Failed to reset config:', err.message);
+      return res.status(500).json({ error: 'Internal server error. Failed to save configuration to disk.' });
+    }
     return res.json({ ok: true, message: 'Configuration reset. Restart Ghost to apply.' });
   }
 
@@ -166,8 +213,8 @@ router.post('/api/save', (req, res) => {
     mailgun: ['apiKey', 'domain']
   };
 
-  if (!fields || typeof fields !== 'object') {
-    return res.status(400).json({ error: 'Missing fields object.' });
+  if (!fields || typeof fields !== 'object' || Array.isArray(fields)) {
+    return res.status(400).json({ error: 'Missing or invalid fields object.' });
   }
 
   const expectedFields = allowedFields[provider];
@@ -188,9 +235,16 @@ router.post('/api/save', (req, res) => {
     }
     
     if (key === 'port') {
-      const portInt = parseInt(val, 10);
-      if (isNaN(portInt) || portInt < 1 || portInt > 65535 || String(val).includes('.')) {
-        return res.status(400).json({ error: 'SMTP Port must be a valid integer between 1 and 65535.' });
+      if (typeof val !== 'string' && typeof val !== 'number') {
+        return res.status(400).json({ error: 'SMTP Port must be a valid integer.' });
+      }
+      const valStr = String(val).trim();
+      if (!/^\d+$/.test(valStr)) {
+        return res.status(400).json({ error: 'SMTP Port must contain digits only.' });
+      }
+      const portInt = Number(valStr);
+      if (portInt < 1 || portInt > 65535) {
+        return res.status(400).json({ error: 'SMTP Port must be between 1 and 65535.' });
       }
     } else {
       if (typeof val !== 'string') {
@@ -231,7 +285,12 @@ router.post('/api/save', (req, res) => {
   if (!schema) return res.status(400).json({ error: 'Unknown provider option raw payload' });
 
   const mailBlock = schema.build(fields);
-  configWriter.writeMail(mailBlock);
+  try {
+    configWriter.writeMail(mailBlock);
+  } catch (err) {
+    console.error('[Mailconfig Router] Failed to write config:', err.message);
+    return res.status(500).json({ error: 'Internal server error. Failed to save configuration to disk.' });
+  }
 
   // Sync in-memory configuration immediately
   try {

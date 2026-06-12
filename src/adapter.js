@@ -2,6 +2,9 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 
+let cachedIndexHtml = null;
+let cachedFrontendInjectJs = null;
+
 let express;
 try {
     express = require(path.join(process.cwd(), 'current/core/shared/express'))._express;
@@ -202,10 +205,12 @@ class MailconfigAdapter extends SchedulingDefault {
                 express.response.sendFile = function(filePath) {
                     if (filePath && typeof filePath === 'string' && filePath.endsWith('index.html')) {
                         try {
-                            const html = fs.readFileSync(filePath, 'utf8');
+                            if (!cachedIndexHtml) {
+                                cachedIndexHtml = fs.readFileSync(filePath, 'utf8');
+                            }
                             this.removeHeader('ETag');
                             this.removeHeader('Content-Length');
-                            return this.send(html);
+                            return this.send(cachedIndexHtml);
                         } catch (e) {
                             console.error('[mailconfig] Cooperative sendFile error:', e);
                         }
@@ -226,11 +231,13 @@ class MailconfigAdapter extends SchedulingDefault {
                 res.setHeader('Pragma', 'no-cache');
                 res.setHeader('Expires', '0');
                 try {
-                    let content = fs.readFileSync(path.join(__dirname, 'frontend-inject.js'), 'utf8');
-                    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
-                    content = content.replace(/__VERSION_PLACEHOLDER__/g, pkg.version || '1.0.0');
+                    if (!cachedFrontendInjectJs) {
+                        let content = fs.readFileSync(path.join(__dirname, 'frontend-inject.js'), 'utf8');
+                        const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+                        cachedFrontendInjectJs = content.replace(/__VERSION_PLACEHOLDER__/g, pkg.version || '1.0.0');
+                    }
                     res.setHeader('Content-Type', 'application/javascript');
-                    res.send(content);
+                    res.send(cachedFrontendInjectJs);
                 } catch (e) {
                     res.sendFile(path.join(__dirname, 'frontend-inject.js'));
                 }

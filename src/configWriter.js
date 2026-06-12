@@ -45,14 +45,13 @@ exports.writeMail = function(mailBlock) {
     config.mail = mailBlock;
   }
 
-  // Update in-memory cache
-  cachedConfig = { mail: config.mail || {} };
-
   // Write atomically
   const tmpPath = configPath + '.tmp';
   try {
     fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), { mode: 0o600 });
     fs.renameSync(tmpPath, configPath);
+    // Update in-memory cache ONLY after successful write and rename
+    cachedConfig = { mail: config.mail || {} };
   } catch (err) {
     try {
       if (fs.existsSync(tmpPath)) {

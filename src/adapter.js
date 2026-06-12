@@ -2,8 +2,10 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 
-let cachedIndexHtml = null;
+const cachedIndexHtmlByPath = new Map();
 let cachedFrontendInjectJs = null;
+let cachedMailTransport = null;
+let cachedMailConfigHash = null;
 
 let express;
 try {
@@ -84,12 +86,25 @@ function hookGhostMailer() {
                         }
                         const transportName = (savedConfig.mail.transport || 'direct').toLowerCase();
                         const options = savedConfig.mail.options ? JSON.parse(JSON.stringify(savedConfig.mail.options)) : {};
+                        const mailConfigHash = JSON.stringify(savedConfig.mail);
                         
                         this.state = {
                             usingDirect: transportName === 'direct',
                             usingMailgun: transportName === 'mailgun'
                         };
-                        this.transport = nodemailer(transportName, options);
+                        if (!cachedMailTransport || cachedMailConfigHash !== mailConfigHash) {
+                            if (cachedMailTransport && typeof cachedMailTransport.close === 'function') {
+                                try {
+                                    cachedMailTransport.close();
+                                } catch (closeErr) {
+                                    console.error('[Mailconfig] Failed to close previous mail transport:', closeErr.message);
+                                }
+                            }
+                            cachedMailTransport = nodemailer(transportName, options);
+                            cachedMailConfigHash = mailConfigHash;
+                            console.log(`[Mailconfig] Created mail transport for: ${transportName}`);
+                        }
+                        this.transport = cachedMailTransport;
                         console.log(`[Mailconfig] Intercepted mail send. Using transport: ${transportName}`);
                     }
                 } catch (e) {
@@ -205,12 +220,13 @@ class MailconfigAdapter extends SchedulingDefault {
                 express.response.sendFile = function(filePath) {
                     if (filePath && typeof filePath === 'string' && filePath.endsWith('index.html')) {
                         try {
-                            if (!cachedIndexHtml) {
-                                cachedIndexHtml = fs.readFileSync(filePath, 'utf8');
+                            const cacheKey = path.resolve(filePath);
+                            if (!cachedIndexHtmlByPath.has(cacheKey)) {
+                                cachedIndexHtmlByPath.set(cacheKey, fs.readFileSync(filePath, 'utf8'));
                             }
                             this.removeHeader('ETag');
                             this.removeHeader('Content-Length');
-                            return this.send(cachedIndexHtml);
+                            return this.send(cachedIndexHtmlByPath.get(cacheKey));
                         } catch (e) {
                             console.error('[mailconfig] Cooperative sendFile error:', e);
                         }

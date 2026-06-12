@@ -1,13 +1,13 @@
 {
   "name": "@sakthi10122004/mailconfig",
-  "version": "1.2.12",
+  "version": "1.2.13",
   "description": "Ghost CMS mail transport configurator — no core file edits",
   "main": "src/adapter.js",
   "bin": {
     "mailconfig-cleanup": "scripts/uninstall.js"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node test/index.js",
     "postinstall": "node scripts/postinstall.js",
     "preuninstall": "node scripts/uninstall.js"
   },

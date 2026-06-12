@@ -7,52 +7,52 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #ffffff;
-      --canvas-bg: #ffffff;
+      --bg: #f4f8fb;
+      --canvas-bg: #f4f8fb;
       --text-main: #15171a;
       --text-muted: #7c8b9a;
-      --border: #f0f3f6;
+      --border: #eaedf1;
       --border-darker: #c5d0db;
       --btn-primary-bg: #15171a;
       --btn-primary-text: #ffffff;
       --btn-primary-hover: #000000;
       --btn-secondary-bg: #ffffff;
       --btn-secondary-text: #15171a;
-      --btn-secondary-border: #e1e8ed;
+      --btn-secondary-border: #eaedf1;
       --btn-secondary-hover: #f4f8fb;
       --input-bg: #ffffff;
-      --input-border: #e1e8ed;
+      --input-border: #eaedf1;
       --input-text: #15171a;
       --input-focus-border: #15171a;
       --input-focus-ring: rgba(21, 23, 26, 0.05);
       --card-bg: #ffffff;
-      --danger-zone-bg: #fff2f2;
-      --danger-zone-border: #ffc9c9;
-      --danger-zone-text: #ff3b30;
+      --danger-zone-bg: rgba(242, 63, 63, 0.03);
+      --danger-zone-border: rgba(242, 63, 63, 0.12);
+      --danger-zone-text: #f23f3f;
       --accent: #30cf43; /* Ghost green */
     }
 
     html.dark {
-      --bg: #15171a;
-      --canvas-bg: #15171a;
+      --bg: #0f1115;
+      --canvas-bg: #0f1115;
       --text-main: #f9fafb;
       --text-muted: #7c8b9a;
-      --border: #24272c;
+      --border: #242831;
       --border-darker: #3a3f47;
       --btn-primary-bg: #ffffff;
       --btn-primary-text: #15171a;
       --btn-primary-hover: #f3f4f6;
       --btn-secondary-bg: #15171a;
       --btn-secondary-text: #f9fafb;
-      --btn-secondary-border: #2c313a;
+      --btn-secondary-border: #242831;
       --btn-secondary-hover: #1e2124;
-      --input-bg: #1e2124;
-      --input-border: #2c313a;
+      --input-bg: #1e2229;
+      --input-border: #242831;
       --input-text: #f9fafb;
       --input-focus-border: #ffffff;
       --input-focus-ring: rgba(255, 255, 255, 0.05);
       --card-bg: #15171a;
-      --danger-zone-bg: rgba(255, 69, 58, 0.05);
+      --danger-zone-bg: rgba(255, 69, 58, 0.04);
       --danger-zone-border: rgba(255, 69, 58, 0.2);
       --danger-zone-text: #ff453a;
     }
@@ -63,11 +63,17 @@
       padding: 0;
     }
 
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg);
       color: var(--text-main);
-      min-height: 100vh;
       display: flex;
       flex-direction: column;
       -webkit-font-smoothing: antialiased;
@@ -76,9 +82,7 @@
 
     /* Sticky Header */
     .gh-header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      position: relative;
       background: var(--card-bg);
       border-bottom: 1px solid var(--border);
       padding: 16px 32px;
@@ -86,35 +90,15 @@
       justify-content: space-between;
       align-items: center;
       height: 64px;
+      flex-shrink: 0;
+      z-index: 100;
     }
 
-    .gh-breadcrumb {
-      font-size: 14px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .gh-breadcrumb a {
-      color: var(--text-muted);
-      text-decoration: none;
-      transition: color 0.15s;
-      cursor: pointer;
-    }
-
-    .gh-breadcrumb a:hover {
-      color: var(--text-main);
-    }
-
-    .gh-breadcrumb .separator {
-      color: var(--text-muted);
-      opacity: 0.6;
-    }
-
-    .gh-breadcrumb .current {
+    .gh-header-title {
+      font-size: 16px;
       font-weight: 600;
       color: var(--text-main);
+      letter-spacing: -0.01em;
     }
 
     .gh-header-actions {
@@ -135,53 +119,74 @@
       font-weight: 600;
       cursor: pointer;
       border: none;
-      transition: all 0.15s ease;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       white-space: nowrap;
       user-select: none;
     }
 
     .gh-btn:active {
-      transform: scale(0.98);
+      transform: scale(0.97);
     }
 
     .gh-btn-primary {
       background: var(--btn-primary-bg);
       color: var(--btn-primary-text);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
     .gh-btn-primary:hover {
       background: var(--btn-primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .gh-btn-primary:disabled {
       opacity: 0.4;
       cursor: not-allowed;
       transform: none;
+      box-shadow: none;
     }
 
     .gh-btn-secondary {
       background: var(--btn-secondary-bg);
       color: var(--btn-secondary-text);
       border: 1px solid var(--btn-secondary-border);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
     }
 
     .gh-btn-secondary:hover {
       background: var(--btn-secondary-hover);
-      border-color: var(--text-muted);
+      border-color: var(--border-darker);
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
     }
 
-    /* Page Content */
     .gh-main-container {
       flex: 1;
-      padding: 24px 32px;
-      overflow-y: auto;
+      padding: 20px 32px 24px 32px;
+      overflow: hidden;
+      height: calc(100% - 64px);
+      box-sizing: border-box;
       display: flex;
       justify-content: center;
+      background: var(--bg);
+    }
+
+    /* Hide scrollbars globally across all components */
+    ::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    
+    html, body, .gh-main-container {
+      -ms-overflow-style: none !important;  /* IE and Edge */
+      scrollbar-width: none !important;  /* Firefox */
     }
 
     .gh-content {
       width: 100%;
-      max-width: 680px;
+      max-width: 820px;
       animation: fadeIn 0.25s ease-out;
     }
 
@@ -191,53 +196,73 @@
     }
 
     .gh-page-title {
-      font-size: 28px;
+      font-size: 24px;
       font-weight: 700;
       letter-spacing: -0.02em;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      color: var(--text-main);
     }
 
     .gh-page-description {
-      font-size: 14px;
+      font-size: 13.5px;
       color: var(--text-muted);
-      margin-bottom: 32px;
-      line-height: 1.5;
+      margin-bottom: 16px;
+      line-height: 1.45;
     }
 
     /* Cards & Layout */
     .gh-card {
-      background: transparent;
-      border: none;
-      border-radius: 0;
-      padding: 0;
-      margin-bottom: 28px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.015);
     }
 
     .gh-card-title {
-      font-size: 15px;
-      font-weight: 600;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
       margin-bottom: 20px;
-      color: var(--text-main);
-      letter-spacing: -0.01em;
+      color: var(--text-muted);
     }
 
-    /* Form Fields */
+    /* Form Fields & Grid Row */
+    .gh-form-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .gh-form-row:last-child {
+      margin-bottom: 0;
+    }
+
+    @media (min-width: 601px) {
+      .gh-form-row.smtp-host-port {
+        grid-template-columns: 3.5fr 1fr;
+      }
+      .gh-form-row.smtp-user-pass {
+        grid-template-columns: 1fr 1fr;
+      }
+      .gh-form-row.mailgun-fields {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
     .gh-form-group {
-      margin-bottom: 20px;
-    }
-
-    .gh-form-group:last-child {
       margin-bottom: 0;
     }
 
     .gh-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 700;
-      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
       display: block;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .gh-input-wrapper {
@@ -255,9 +280,15 @@
       border-radius: 6px;
       font-size: 14px;
       color: var(--input-text);
-      transition: all 0.15s ease;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
       outline: none;
       font-family: inherit;
+    }
+
+    /* Hide native browser password reveal eye icon (like in MS Edge) */
+    .gh-input::-ms-reveal,
+    .gh-input::-ms-clear {
+      display: none !important;
     }
 
     .gh-input:hover {
@@ -266,14 +297,15 @@
 
     .gh-input:focus {
       border-color: var(--input-focus-border);
+      background: var(--card-bg);
       box-shadow: 0 0 0 3px var(--input-focus-ring);
     }
 
     .gh-input-helper {
-      font-size: 12.5px;
+      font-size: 12px;
       color: var(--text-muted);
       margin-top: 6px;
-      line-height: 1.45;
+      line-height: 1.4;
     }
 
     .gh-select {
@@ -288,26 +320,138 @@
 
     /* Password eye toggle */
     .gh-password-toggle {
-      position: absolute;
-      right: 12px;
-      cursor: pointer;
-      color: var(--text-muted);
+      width: 38px;
+      height: 38px;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 24px;
-      height: 24px;
-      border: none;
-      background: transparent;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
     }
 
     .gh-password-toggle:hover {
+      border-color: var(--border-darker);
       color: var(--text-main);
     }
 
     .gh-password-toggle svg {
       width: 16px;
       height: 16px;
+    }
+
+    .gh-tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .gh-tab-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .gh-tab-btn:hover {
+      border-color: var(--border-darker);
+      color: var(--text-main);
+    }
+
+    .gh-tab-btn.active {
+      border-color: var(--text-main);
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    html.dark .gh-tab-btn.active {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .gh-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+
+    /* Switch toggle switch */
+    .gh-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .gh-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .gh-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--border);
+      border: 1px solid var(--border-darker);
+      transition: .2s;
+    }
+
+    .gh-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--text-main);
+      transition: .2s;
+    }
+
+    input:checked + .gh-slider {
+      background-color: var(--text-main);
+      border-color: var(--text-main);
+    }
+
+    input:checked + .gh-slider:before {
+      background-color: var(--card-bg);
+      transform: translateX(20px);
+    }
+
+    .gh-slider.round {
+      border-radius: 24px;
+    }
+
+    .gh-slider.round:before {
+      border-radius: 50%;
+    }
+
+    /* Connection Status elements */
+    .gh-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--text-muted);
+      display: inline-block;
+    }
+
+    .gh-status-text {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      font-weight: 500;
     }
 
     /* Alerts */
@@ -337,18 +481,15 @@
     /* Danger Zone card */
     .gh-danger-card {
       border: 1px solid var(--danger-zone-border);
-      background: rgba(255, 69, 58, 0.02);
-      border-radius: 8px;
-      padding: 24px;
-      margin-top: 48px;
+      background: var(--danger-zone-bg);
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin-top: 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 16px;
-    }
-    
-    html.dark .gh-danger-card {
-      background: rgba(255, 69, 58, 0.04);
+      box-shadow: 0 1px 3px rgba(255, 69, 58, 0.02);
     }
 
     .gh-danger-info h4 {
@@ -370,7 +511,7 @@
     }
 
     .gh-btn-danger:hover {
-      background: var(--danger-zone-bg);
+      background: rgba(255, 69, 58, 0.08);
       border-color: var(--danger-zone-text);
     }
 
@@ -383,6 +524,7 @@
       }
       .gh-main-container {
         padding: 16px;
+        overflow-y: auto;
       }
       .gh-page-title {
         font-size: 22px;
@@ -390,27 +532,99 @@
       .gh-page-description {
         margin-bottom: 20px;
       }
+      .gh-card {
+        padding: 16px 20px;
+        margin-bottom: 16px;
+      }
       .gh-danger-card {
         flex-direction: column;
         align-items: stretch;
         gap: 16px;
         text-align: center;
-        padding: 16px;
+        padding: 16px 20px;
       }
       .gh-btn-danger {
         width: 100%;
       }
+    }
+
+    /* Custom Confirmation Modal */
+    .gh-confirm-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .gh-confirm-modal-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(8, 9, 12, 0.5);
+    }
+
+    .gh-confirm-modal-box {
+      position: relative;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 32px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.18);
+      animation: modalSlideIn 0.2s cubic-bezier(0.19, 1, 0.22, 1);
+    }
+
+    @keyframes modalSlideIn {
+      from { transform: translateY(10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .gh-confirm-modal-header h4 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+    }
+
+    .gh-confirm-modal-body p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+
+    .gh-confirm-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .gh-btn-danger-confirm {
+      background: #f23f3f;
+      color: #ffffff;
+      border: none;
+    }
+
+    .gh-btn-danger-confirm:hover {
+      background: #e02f2f;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(242, 63, 63, 0.2);
     }
   </style>
 </head>
 <body>
   <!-- Header Bar -->
   <header class="gh-header">
-    <div class="gh-breadcrumb">
-      <a onclick="goToSettings()">Settings</a>
-      <span class="separator">/</span>
-      <span class="current">Mail Transport</span>
-    </div>
+    <div class="gh-header-title">Mail Settings</div>
     <div class="gh-header-actions" id="header-actions">
       <!-- Injected buttons state machine -->
       <button class="gh-btn gh-btn-primary" onclick="closeConfig()">Done</button>
@@ -423,40 +637,55 @@
       <!-- Status Messages Alert -->
       <div id="gh-alert" class="gh-alert"></div>
 
-      <h1 class="gh-page-title">Mail Transport</h1>
-      <p class="gh-page-description">Configure the provider and security settings for all outgoing Ghost newsletters and system emails.</p>
+      <h1 class="gh-page-title" style="text-transform: none; font-size: 24px;">Mail transport</h1>
+      <p class="gh-page-description">Configure how Ghost sends newsletters and system notifications.</p>
 
-      <!-- Active Provider Selection Card -->
-      <div class="gh-card">
-        <div class="gh-card-title">Select Outbound Provider</div>
-        <div class="gh-form-group">
-          <label class="gh-label">Active Provider</label>
-          <div class="gh-input-wrapper">
-            <select id="provider" class="gh-input gh-select" onchange="renderFields()">
-              <option value="smtp">Custom SMTP Server</option>
-              <option value="mailgun">Mailgun API</option>
-            </select>
-          </div>
-          <p class="gh-input-helper">Choose SMTP to configure custom host relays, or Mailgun to route delivery through Mailgun's API.</p>
-        </div>
+      <!-- Pill Tabs for active provider selection -->
+      <div class="gh-tabs">
+        <button id="tab-smtp" class="gh-tab-btn active" type="button" onclick="selectProvider('smtp')">Custom SMTP</button>
+        <button id="tab-mailgun" class="gh-tab-btn" type="button" onclick="selectProvider('mailgun')">Mailgun API</button>
       </div>
 
-      <!-- Provider Credentials Form Fields Card -->
-      <div class="gh-card" id="provider-fields-card">
-        <div class="gh-card-title" id="fields-card-title">Credentials</div>
+      <!-- Hidden select to bridge tabs and existing config state machine -->
+      <select id="provider" style="display: none;" onchange="renderFields()">
+        <option value="smtp">Custom SMTP Server</option>
+        <option value="mailgun">Mailgun API</option>
+      </select>
+
+      <!-- Mail Configuration Card -->
+      <div class="gh-card">
+        <div class="gh-card-title" id="fields-card-title">SERVER CONNECTION</div>
         <div id="fields"></div>
+
       </div>
 
       <!-- Destructive Action Isolation Area (Danger Zone) -->
       <div class="gh-danger-card">
         <div class="gh-danger-info">
-          <h4>Reset Configuration</h4>
-          <p>Remove all custom credentials and revert settings back to Ghost's configuration file defaults.</p>
+          <h4 style="color: var(--danger-zone-text);">Reset to defaults</h4>
+          <p>Remove all custom credentials and revert to Ghost's config file values.</p>
         </div>
-        <button class="gh-btn gh-btn-danger" onclick="resetConfig()">Reset to Defaults</button>
+        <button class="gh-btn gh-btn-danger" onclick="resetConfig()" style="background: transparent; color: var(--danger-zone-text); border-color: var(--danger-zone-border);">Reset</button>
       </div>
     </div>
   </main>
+
+  <!-- Custom Confirmation Modal -->
+  <div id="confirm-modal" class="gh-confirm-modal" style="display: none;">
+    <div class="gh-confirm-modal-backdrop" onclick="closeConfirmModal()"></div>
+    <div class="gh-confirm-modal-box">
+      <div class="gh-confirm-modal-header">
+        <h4>Revert to defaults</h4>
+      </div>
+      <div class="gh-confirm-modal-body">
+        <p>Are you sure you want to revert all settings to default configuration? This cannot be undone.</p>
+      </div>
+      <div class="gh-confirm-modal-footer">
+        <button class="gh-btn gh-btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+        <button class="gh-btn gh-btn-danger-confirm" onclick="confirmResetConfig()">Revert</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const fieldDefs = {
@@ -465,27 +694,37 @@
     };
 
     const labels = {
-      host: 'SMTP Host',
-      port: 'SMTP Port',
-      user: 'SMTP Username',
-      pass: 'SMTP Password',
-      apiKey: 'Mailgun API Key',
-      domain: 'Mailgun Domain'
+      host: 'SMTP host',
+      port: 'Port',
+      user: 'Username',
+      pass: 'Password',
+      apiKey: 'API Key',
+      domain: 'Domain'
     };
 
     const helpers = {
-      host: 'The server address of your SMTP provider (e.g. smtp.mailgun.org, smtp.sendgrid.net, smtp.gmail.com).',
-      port: 'The connection port. Typically 587 for secure STARTTLS, or 465 for SSL/TLS.',
+      host: 'SMTP server address (e.g. smtp.mailgun.org, smtp.gmail.com).',
+      port: 'Typically 587 for STARTTLS, or 465 for SSL/TLS.',
       user: 'Authentication username for your SMTP server.',
-      pass: 'Authentication password or app token for your SMTP server.',
-      apiKey: 'Your secret Mailgun sending key (usually starts with "key-" or "api-").',
-      domain: 'The sending domain registered and verified inside your Mailgun account.'
+      pass: 'Authentication password or API token.',
+      apiKey: 'Your secret Mailgun sending key (starts with "key-" or "api-").',
+      domain: 'The verified sending domain inside your Mailgun account.'
     };
 
     const eyeIcon = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>`;
     const eyeOffIcon = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>`;
 
     let originalState = '';
+
+    // State caches to persist input values across tab switches
+    let currentValues = {
+      smtp: { host: '', port: '', user: '', pass: '' },
+      mailgun: { apiKey: '', domain: '' }
+    };
+    let originalValues = {
+      smtp: { host: '', port: '', user: '', pass: '' },
+      mailgun: { apiKey: '', domain: '' }
+    };
 
     // Automatically inherit Dark/Light theme class from Ghost parent window
     function detectTheme() {
@@ -527,7 +766,6 @@
       const headerActions = document.getElementById('header-actions');
       if (isChanged) {
         headerActions.innerHTML = `
-          <button class="gh-btn gh-btn-secondary" onclick="cancelChanges()">Cancel</button>
           <button id="saveBtn" class="gh-btn gh-btn-primary" onclick="save()">Save</button>
         `;
       } else {
@@ -553,6 +791,12 @@
     }
 
     function handleInput(e) {
+      // Write the value back to the state cache
+      const provider = document.getElementById('provider').value;
+      const fieldName = e.target.id.replace('f_', '');
+      if (currentValues[provider] && fieldName in currentValues[provider]) {
+        currentValues[provider][fieldName] = e.target.value;
+      }
       checkChanges();
       if (e.target.id === 'f_pass' || e.target.id === 'f_apiKey') {
         updatePasswordToggleVisibility(e.target.id);
@@ -570,31 +814,89 @@
       });
     }
 
+    function selectProvider(val) {
+      document.getElementById('provider').value = val;
+      
+      const tabSmtp = document.getElementById('tab-smtp');
+      const tabMailgun = document.getElementById('tab-mailgun');
+      if (tabSmtp && tabMailgun) {
+        tabSmtp.classList.toggle('active', val === 'smtp');
+        tabMailgun.classList.toggle('active', val === 'mailgun');
+      }
+      
+      renderFields();
+      checkChanges();
+    }
+
     function renderFields() {
       const provider = document.getElementById('provider').value;
       
-      // Update fields card title based on active provider
       const cardTitle = document.getElementById('fields-card-title');
-      if (provider === 'smtp') {
-        cardTitle.textContent = 'Custom SMTP Credentials';
-      } else if (provider === 'mailgun') {
-        cardTitle.textContent = 'Mailgun API Settings';
+      if (cardTitle) {
+        if (provider === 'smtp') {
+          cardTitle.textContent = 'SERVER CONNECTION';
+        } else if (provider === 'mailgun') {
+          cardTitle.textContent = 'MAILGUN API SETTINGS';
+        }
       }
 
-      document.getElementById('fields').innerHTML = fieldDefs[provider].map(f => {
+
+      const getFieldHtml = (f) => {
         const isSecure = f === 'pass' || f === 'apiKey';
         const toggleHtml = isSecure ? `<button class="gh-password-toggle" type="button" onclick="togglePassword('f_${f}', this)" title="Show">${eyeIcon}</button>` : '';
-        const placeholder = f === 'port' ? 'e.g. 587' : `Enter your ${labels[f].toLowerCase()}...`;
+        
+        const placeholders = {
+          host: 'smtp.mailgun.org',
+          port: '587',
+          user: 'postmaster@mg.example.com',
+          pass: '••••••••••••',
+          domain: 'mg.example.com',
+          apiKey: 'key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+        };
+        const placeholder = placeholders[f] || '';
         
         return `<div class="gh-form-group">
           <label class="gh-label">${labels[f]}</label>
-          <div class="gh-input-wrapper">
-            <input id="f_${f}" class="gh-input" type="${isSecure ? 'password' : 'text'}" placeholder="${placeholder}" style="${isSecure ? 'padding-right: 40px;' : ''}">
+          <div class="gh-input-wrapper" style="display: flex; gap: 8px; width: 100%;">
+            <input id="f_${f}" class="gh-input" type="${isSecure ? 'password' : 'text'}" placeholder="${placeholder}">
             ${toggleHtml}
           </div>
           <p class="gh-input-helper">${helpers[f]}</p>
         </div>`;
-      }).join('');
+      };
+
+      let html = '';
+      if (provider === 'smtp') {
+        html = `
+          <div class="gh-form-row smtp-host-port">
+            ${getFieldHtml('host')}
+            ${getFieldHtml('port')}
+          </div>
+          <div class="gh-form-row smtp-user-pass">
+            ${getFieldHtml('user')}
+            ${getFieldHtml('pass')}
+          </div>
+        `;
+      } else if (provider === 'mailgun') {
+        html = `
+          <div class="gh-form-row mailgun-fields">
+            ${getFieldHtml('domain')}
+            ${getFieldHtml('apiKey')}
+          </div>
+        `;
+      }
+
+      document.getElementById('fields').innerHTML = html;
+
+      // Populate inputs from the state cache
+      if (fieldDefs[provider]) {
+        fieldDefs[provider].forEach(f => {
+          const el = document.getElementById('f_' + f);
+          if (el && currentValues[provider] && currentValues[provider][f] !== undefined) {
+            el.value = currentValues[provider][f];
+          }
+        });
+      }
       
       attachListeners();
       checkChanges();
@@ -618,19 +920,10 @@
 
     function cancelChanges() {
       try {
+        // Restore currentValues from originalValues deep clone
+        currentValues = JSON.parse(JSON.stringify(originalValues));
         const data = JSON.parse(originalState);
-        document.getElementById('provider').value = data.provider;
-        renderFields();
-        const fields = data.fields;
-        for (const key in fields) {
-          const input = document.getElementById('f_' + key);
-          if (input) {
-            input.value = fields[key];
-            if (key === 'pass' || key === 'apiKey') {
-              updatePasswordToggleVisibility('f_' + key);
-            }
-          }
-        }
+        selectProvider(data.provider);
       } catch (e) {
         console.error('Reversion error:', e);
       }
@@ -648,13 +941,17 @@
       try {
         const r = await fetch('/ghost/mailconfig/api/save', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'x-mailconfig-request': '1'
+          },
           body: JSON.stringify({ provider, fields })
         });
         const d = await r.json();
         
         showAlert(d.ok, d.message || d.error);
         if (d.ok) {
+          closeConfig();
           await init();
         }
       } catch (e) {
@@ -665,28 +962,46 @@
     }
 
     function showAlert(ok, msg) {
-      const el = document.getElementById('gh-alert');
-      el.className = 'gh-alert ' + (ok ? 'success' : 'error');
-      el.style.display = 'block';
-      el.textContent = msg;
-      
-      // Smooth scroll back to top of main viewport to see the alert
-      const container = document.querySelector('.gh-main-container');
-      if (container) {
-        container.scrollTo({ top: 0, behavior: 'smooth' });
+      if (window.parent && typeof window.parent.showGhostNotification === 'function') {
+        window.parent.showGhostNotification(ok ? 'success' : 'error', msg);
+      } else {
+        const el = document.getElementById('gh-alert');
+        el.className = 'gh-alert ' + (ok ? 'success' : 'error');
+        el.style.display = 'block';
+        el.textContent = msg;
+        
+        // Smooth scroll back to top of main viewport to see the alert
+        const container = document.querySelector('.gh-main-container');
+        if (container) {
+          container.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       }
     }
 
-    async function resetConfig() {
-      if (!confirm("Are you sure you want to revert all settings to default configuration? This cannot be undone.")) return;
+    function showConfirmModal() {
+      document.getElementById('confirm-modal').style.display = 'flex';
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('confirm-modal').style.display = 'none';
+    }
+
+    async function confirmResetConfig() {
+      closeConfirmModal();
       
       try {
         const r = await fetch('/ghost/mailconfig/api/save', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'x-mailconfig-request': '1'
+          },
           body: JSON.stringify({ provider: 'reset' })
         });
         const d = await r.json();
+        if (d.ok) {
+          closeConfig();
+        }
         showAlert(d.ok, d.message || d.error);
         if (d.ok) {
           setTimeout(() => window.location.reload(), 1500);
@@ -694,6 +1009,10 @@
       } catch (e) {
         showAlert(false, 'Failed to reset settings. Check connection.');
       }
+    }
+
+    function resetConfig() {
+      showConfirmModal();
     }
 
     function closeConfig() {
@@ -712,36 +1031,49 @@
 
     async function init() {
       detectTheme();
-      renderFields();
+
+      // Reset state caches
+      currentValues = {
+        smtp: { host: '', port: '', user: '', pass: '' },
+        mailgun: { apiKey: '', domain: '' }
+      };
       
       try {
-        const config = await fetch('/ghost/mailconfig/api/config').then(r => r.json());
+        const config = await fetch('/ghost/mailconfig/api/config', {
+          headers: {
+            'x-mailconfig-request': '1'
+          }
+        }).then(r => r.json());
         if (config && config.transport) {
           if (config.transport === 'SMTP') {
-            document.getElementById('provider').value = 'smtp';
-            renderFields();
             if (config.options) {
-              if (document.getElementById('f_host')) document.getElementById('f_host').value = config.options.host || '';
-              if (document.getElementById('f_port')) document.getElementById('f_port').value = config.options.port || '';
+              currentValues.smtp.host = config.options.host || '';
+              currentValues.smtp.port = config.options.port !== undefined ? String(config.options.port) : '';
               if (config.options.auth) {
-                if (document.getElementById('f_user')) document.getElementById('f_user').value = config.options.auth.user || '';
-                if (document.getElementById('f_pass')) document.getElementById('f_pass').value = config.options.auth.pass || '';
+                currentValues.smtp.user = config.options.auth.user || '';
+                currentValues.smtp.pass = config.options.auth.pass || '';
               }
             }
+            selectProvider('smtp');
           } else if (config.transport === 'Mailgun') {
-            document.getElementById('provider').value = 'mailgun';
-            renderFields();
             if (config.options && config.options.auth) {
-              if (document.getElementById('f_apiKey')) document.getElementById('f_apiKey').value = config.options.auth.api_key || '';
-              if (document.getElementById('f_domain')) document.getElementById('f_domain').value = config.options.auth.domain || '';
+              currentValues.mailgun.apiKey = config.options.auth.api_key || '';
+              currentValues.mailgun.domain = config.options.auth.domain || '';
             }
+            selectProvider('mailgun');
           }
+        } else {
+          renderFields();
         }
-      } catch (e) {}
+      } catch (e) {
+        renderFields();
+      }
       
       updatePasswordToggleVisibility('f_pass');
       updatePasswordToggleVisibility('f_apiKey');
       
+      // Snapshot original values for dirty checking and cancel/revert
+      originalValues = JSON.parse(JSON.stringify(currentValues));
       originalState = getFormState();
       checkChanges();
     }

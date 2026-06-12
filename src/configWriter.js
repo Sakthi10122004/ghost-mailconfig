@@ -1,4 +1,4 @@
-const fs   = require('fs');
+const fs = require('fs');
 const path = require('path');
 
 const ghostRoot = process.env.INIT_CWD || process.cwd();
@@ -10,7 +10,7 @@ function getEnvConfigPath() {
 
 let cachedConfig = null;
 
-exports.read = function() {
+exports.read = function () {
   if (cachedConfig !== null) {
     return cachedConfig;
   }
@@ -29,14 +29,14 @@ exports.read = function() {
   }
 };
 
-exports.writeMail = function(mailBlock) {
+exports.writeMail = function (mailBlock) {
   const configPath = getEnvConfigPath();
   let config = {};
   if (fs.existsSync(configPath)) {
     try {
       config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     } catch (e) {
-      config = {};
+      throw new Error(`Cannot parse existing Ghost config at ${configPath}: ${e.message}`);
     }
   }
   if (mailBlock === undefined) {
@@ -57,7 +57,14 @@ exports.writeMail = function(mailBlock) {
       if (fs.existsSync(tmpPath)) {
         fs.unlinkSync(tmpPath);
       }
-    } catch (e) {}
+    } catch (e) { }
     throw err;
+  }
+};
+
+exports._test = {
+  getEnvConfigPath,
+  resetCache: function () {
+    cachedConfig = null;
   }
 };

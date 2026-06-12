@@ -92,6 +92,49 @@
         return false;
     }
 
+    // ── Global Native-style Ghost Notification Injection ─────────────
+    window.showGhostNotification = function(type, message) {
+        let container = document.querySelector('.gh-notifications');
+        if (!container) {
+            container = document.createElement('aside');
+            container.className = 'gh-notifications';
+            container.style.cssText = 'position: fixed; top: 16px; left: 0; right: 0; z-index: 1000000; display: flex; flex-direction: column; gap: 12px; pointer-events: none;';
+            document.body.appendChild(container);
+        }
+        
+        const notif = document.createElement('div');
+        notif.className = `gh-notification gh-notification-passive gh-notification-${type}`;
+        notif.style.cssText = `
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;
+            background: ${type === 'success' ? '#30cf43' : '#f23f3f'};
+            color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            animation: mailconfigFadeIn 0.2s ease-out; pointer-events: auto;
+            max-width: 600px; margin: 0 auto; width: calc(100% - 32px);
+        `;
+        
+        notif.innerHTML = `
+            <div class="gh-notification-content" style="flex-grow: 1; margin-right: 12px;">${message}</div>
+            <button class="gh-notification-close" style="background: none; border: none; color: #ffffff; cursor: pointer; padding: 4px; display: flex; align-items: center; outline: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        `;
+        
+        notif.querySelector('.gh-notification-close').addEventListener('click', () => {
+            notif.style.animation = 'mailconfigFadeOut 0.2s ease-in forwards';
+            setTimeout(() => notif.remove(), 180);
+        });
+        
+        container.appendChild(notif);
+        
+        setTimeout(() => {
+            if (notif.parentNode) {
+                notif.style.animation = 'mailconfigFadeOut 0.2s ease-in forwards';
+                setTimeout(() => notif.remove(), 180);
+            }
+        }, 4000);
+    };
+
     // ── Installed Plugins Dashboard Overlay UI ────────────────────────
     window.openPluginsDashboard = async function() {
         if (document.getElementById('ghost-plugins-overlay')) return;
@@ -111,7 +154,7 @@
         const overlay = document.createElement('div');
         overlay.id = 'ghost-plugins-overlay';
         overlay.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(8, 9, 12, 0.45); backdrop-filter: blur(4px);
             z-index: 999998; display: flex; justify-content: center; align-items: center;
             animation: pluginsFadeIn 0.2s ease-out;
@@ -302,7 +345,7 @@
         const overlay = document.createElement('div');
         overlay.id = 'mailconfig-overlay';
         overlay.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(8, 9, 12, 0.4); backdrop-filter: blur(2px);
             z-index: 999999; display: flex; justify-content: center; align-items: center;
             animation: mailconfigFadeIn 0.2s ease-out;
@@ -324,8 +367,8 @@
                     }
                 }
             </style>
-            <div id="mailconfig-modal-box" style="width: 90%; max-width: 680px; height: 85%; max-height: 800px; background: ${isDark ? '#15171a' : '#ffffff'}; border: 1px solid ${isDark ? '#24272c' : '#f0f3f6'}; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.15); display: flex; flex-direction: column; animation: mailconfigSlideIn 0.25s cubic-bezier(0.19, 1, 0.22, 1);">
-                <iframe src="/ghost/mailconfig/" style="width: 100%; height: 100%; border: none; background: transparent;"></iframe>
+            <div id="mailconfig-modal-box" style="width: 90%; max-width: 880px; height: 680px; max-height: 680px; background: ${isDark ? '#15171a' : '#ffffff'}; border: 1px solid ${isDark ? '#24272c' : '#f0f3f6'}; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.15); display: flex; flex-direction: column; animation: mailconfigSlideIn 0.25s cubic-bezier(0.19, 1, 0.22, 1);">
+                <iframe src="/ghost/mailconfig/" style="width: 100%; height: 100%; border: none; background: transparent; overflow: hidden;" scrolling="no"></iframe>
             </div>
         `;
         

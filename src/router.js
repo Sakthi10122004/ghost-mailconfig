@@ -5,6 +5,9 @@ const router       = express.Router();
 const configWriter = require('./configWriter');
 const providers    = require('./providers');
 
+const INTERNAL_REQUEST_HEADER = 'x-mailconfig-request';
+const SECRET_MASK = '••••••••';
+
 // Helper to locate Ghost files dynamically
 function getGhostPath(relativePath) {
     const ghostRoot = process.env.INIT_CWD || process.cwd();
@@ -82,11 +85,107 @@ try {
   console.error('[Mailconfig Auth] Failed to load Ghost URL config:', e.message);
 }
 
+function buildAllowedHosts(host) {
+  const allowedHosts = new Set();
+  if (host) {
+    allowedHosts.add(host.toLowerCase());
+  }
+
+  if (ghostAdminUrl) {
+    try { allowedHosts.add(new URL(ghostAdminUrl).host.toLowerCase()); } catch (e) {}
+  }
+  if (ghostUrl) {
+    try { allowedHosts.add(new URL(ghostUrl).host.toLowerCase()); } catch (e) {}
+  }
+
+  return allowedHosts;
+}
+
+function isHostAllowed(urlStr, allowedHosts) {
+  try {
+    const u = new URL(urlStr);
+    return allowedHosts.has(u.host.toLowerCase());
+  } catch (e) {
+    return false;
+  }
+}
+
+function validateSameOrigin(req) {
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const allowedHosts = buildAllowedHosts(req.headers.host);
+
+  if (origin) {
+    return isHostAllowed(origin, allowedHosts) ? null : 'Forbidden. Origin mismatch.';
+  }
+  if (referer) {
+    return isHostAllowed(referer, allowedHosts) ? null : 'Forbidden. Referer mismatch.';
+  }
+  return 'Forbidden. Missing Origin or Referer header.';
+}
+
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isSafeKey(key) {
+  return key !== '__proto__' && key !== 'constructor' && key !== 'prototype';
+}
+
+function validatePortValue(val) {
+  if (typeof val !== 'string' && typeof val !== 'number') {
+    return 'SMTP Port must be a valid integer.';
+  }
+  const valStr = String(val).trim();
+  if (!/^\d+$/.test(valStr)) {
+    return 'SMTP Port must contain digits only.';
+  }
+  const portInt = Number(valStr);
+  if (portInt < 1 || portInt > 65535) {
+    return 'SMTP Port must be between 1 and 65535.';
+  }
+  return null;
+}
+
+function isExpectedFetchDestination(req, allowedDestinations) {
+  const destination = req.headers['sec-fetch-dest'];
+  if (!destination) return true;
+  return allowedDestinations.includes(String(destination).toLowerCase());
+}
+
+function requireFetchDestination(allowedDestinations) {
+  return function(req, res, next) {
+    if (!isExpectedFetchDestination(req, allowedDestinations)) {
+      return res.status(404).send('Not Found');
+    }
+    next();
+  };
+}
+
+function requireInternalRequest(req, res, next) {
+  if (req.get(INTERNAL_REQUEST_HEADER) !== '1') {
+    return res.status(404).send('Not Found');
+  }
+  next();
+}
+
+function serveFrontendInject(req, res) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  try {
+    let content = fs.readFileSync(path.join(__dirname, 'frontend-inject.js'), 'utf8');
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+    content = content.replace(/__VERSION_PLACEHOLDER__/g, pkg.version || '1.0.0');
+    res.setHeader('Content-Type', 'application/javascript');
+    res.send(content);
+  } catch (e) {
+    res.sendFile(path.join(__dirname, 'frontend-inject.js'));
+  }
+}
+
 // Authentication middleware to restrict route access to administrators
 async function requireAdminAuth(req, res, next) {
-  // Allow frontend-inject.js to load without session auth
-  if (req.path === '/frontend-inject.js') return next();
-
   if (getSession) {
     try {
       const sessionObj = await getSession(req, res);
@@ -113,13 +212,16 @@ async function requireAdminAuth(req, res, next) {
 router.use(express.json());
 router.use(requireAdminAuth);
 
+// Frontend asset: authenticated and served only as a script load, not direct navigation.
+router.get('/frontend-inject.js', requireFetchDestination(['script', 'empty']), serveFrontendInject);
+
 // UI Dashboard serving route
-router.get('/', (req, res) => {
+router.get('/', requireFetchDestination(['iframe', 'frame']), (req, res) => {
   res.sendFile(path.join(__dirname, '../ui/index.html'));
 });
 
 // GET current running mail config settings with masked secrets
-router.get('/api/config', (req, res) => {
+router.get('/api/config', requireInternalRequest, (req, res) => {
   const config = configWriter.read();
   const mailConfig = JSON.parse(JSON.stringify(config.mail || {}));
   
@@ -135,52 +237,15 @@ router.get('/api/config', (req, res) => {
 });
 
 // POST save incoming configuration adjustments
-router.post('/api/save', (req, res) => {
+router.post('/api/save', requireInternalRequest, (req, res) => {
   // Same-Origin Protection
-  const origin = req.headers.origin;
-  const referer = req.headers.referer;
-  const host = req.headers.host;
-  
-  const allowedHosts = new Set();
-  if (host) {
-    allowedHosts.add(host.toLowerCase());
-  }
-  
-  const xForwardedHost = req.headers['x-forwarded-host'];
-  if (xForwardedHost) {
-    xForwardedHost.split(',').forEach(h => allowedHosts.add(h.trim().toLowerCase()));
-  }
-  
-  if (ghostAdminUrl) {
-    try { allowedHosts.add(new URL(ghostAdminUrl).host.toLowerCase()); } catch (e) {}
-  }
-  if (ghostUrl) {
-    try { allowedHosts.add(new URL(ghostUrl).host.toLowerCase()); } catch (e) {}
-  }
-
-  function isHostAllowed(urlStr) {
-    try {
-      const u = new URL(urlStr);
-      return allowedHosts.has(u.host.toLowerCase());
-    } catch (e) {
-      return false;
-    }
-  }
-  
-  if (origin) {
-    if (!isHostAllowed(origin)) {
-      return res.status(403).json({ error: 'Forbidden. Origin mismatch.' });
-    }
-  } else if (referer) {
-    if (!isHostAllowed(referer)) {
-      return res.status(403).json({ error: 'Forbidden. Referer mismatch.' });
-    }
-  } else {
-    return res.status(403).json({ error: 'Forbidden. Missing Origin or Referer header.' });
+  const sameOriginError = validateSameOrigin(req);
+  if (sameOriginError) {
+    return res.status(403).json({ error: sameOriginError });
   }
 
   // Reject non-object bodies
-  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+  if (!isPlainObject(req.body)) {
     return res.status(400).json({ error: 'Invalid request body shape.' });
   }
 
@@ -192,8 +257,7 @@ router.post('/api/save', (req, res) => {
   }
 
   // Reject prototype pollution keys in body or fields
-  const isSafeKey = key => key !== '__proto__' && key !== 'constructor' && key !== 'prototype';
-  const allKeys = [...Object.keys(req.body), ...(fields && typeof fields === 'object' && !Array.isArray(fields) ? Object.keys(fields) : [])];
+  const allKeys = [...Object.keys(req.body), ...(isPlainObject(fields) ? Object.keys(fields) : [])];
   if (allKeys.some(k => !isSafeKey(k))) {
     return res.status(400).json({ error: 'Invalid field keys detected.' });
   }
@@ -213,7 +277,7 @@ router.post('/api/save', (req, res) => {
     mailgun: ['apiKey', 'domain']
   };
 
-  if (!fields || typeof fields !== 'object' || Array.isArray(fields)) {
+  if (!isPlainObject(fields)) {
     return res.status(400).json({ error: 'Missing or invalid fields object.' });
   }
 
@@ -235,16 +299,9 @@ router.post('/api/save', (req, res) => {
     }
     
     if (key === 'port') {
-      if (typeof val !== 'string' && typeof val !== 'number') {
-        return res.status(400).json({ error: 'SMTP Port must be a valid integer.' });
-      }
-      const valStr = String(val).trim();
-      if (!/^\d+$/.test(valStr)) {
-        return res.status(400).json({ error: 'SMTP Port must contain digits only.' });
-      }
-      const portInt = Number(valStr);
-      if (portInt < 1 || portInt > 65535) {
-        return res.status(400).json({ error: 'SMTP Port must be between 1 and 65535.' });
+      const portError = validatePortValue(val);
+      if (portError) {
+        return res.status(400).json({ error: portError });
       }
     } else {
       if (typeof val !== 'string') {
@@ -304,5 +361,14 @@ router.post('/api/save', (req, res) => {
 
   res.json({ ok: true, message: 'Configuration saved successfully.' });
 });
+
+router._test = {
+  buildAllowedHosts,
+  isHostAllowed,
+  validateSameOrigin,
+  isPlainObject,
+  isSafeKey,
+  validatePortValue
+};
 
 module.exports = router;
